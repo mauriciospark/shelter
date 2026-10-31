@@ -1,1350 +1,352 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rede LoRa Tactical Mesh & Rádio PTT</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Leaflet CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- QRCode JS Library for QR Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- Html5-QRCode JS Library for Camera & File Scanning -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        cyber: {
-                            bg: '#080c14',
-                            panel: '#0e1626',
-                            card: '#162032',
-                            border: '#1f2d42',
-                            accent: '#10b981', // LoRa Green
-                            accentLight: '#34d399',
-                            cyan: '#06b6d4',
-                            danger: '#ef4444',
-                            warning: '#f59e0b',
-                            text: '#f3f4f6',
-                            muted: '#9ca3af'
-                        }
-                    },
-                    fontFamily: {
-                        mono: ['Courier New', 'Consolas', 'monospace']
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            background-color: #080c14;
-            color: #f3f4f6;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow-x: hidden;
-        }
-
-        /* Custom Scrollbars */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #080c14;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1f2d42;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #10b981;
-        }
-
-        /* Leaflet Dark Theme Overrides */
-        .leaflet-container {
-            background-color: #05080f !important;
-            font-family: inherit;
-        }
-        .leaflet-tile {
-            filter: brightness(0.7) invert(1) contrast(1.2) hue-rotate(200deg) saturate(0.3);
-        }
-        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-            background: #0e1626 !important;
-            color: #f3f4f6 !important;
-            border: 1px solid #10b981;
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
-        }
-        .leaflet-popup-content {
-            margin: 10px;
-        }
-
-        /* PTT Button Pulse Animation */
-        @keyframes pttGlow {
-            0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5), inset 0 0 15px rgba(239, 68, 68, 0.5); }
-            50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.9), inset 0 0 25px rgba(239, 68, 68, 0.8); }
-            100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5), inset 0 0 15px rgba(239, 68, 68, 0.5); }
-        }
-
-        .ptt-active {
-            animation: pttGlow 1s infinite;
-            background: radial-gradient(circle, #dc2626 0%, #991b1b 100%) !important;
-        }
-
-        /* CRT Radar Grid Overlay */
-        .radar-grid {
-            background-image: linear-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shelter</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#222819">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{--bg:#171a12;--pn:#222819;--pn2:#2d3422;--ln:#434d33;--tx:#e6e2cf;--mu:#a0a086;--am:#e3a41d;--gr:#8db04b;--er:#e0513a;--out:#37441f;--in:#2a3120;color-scheme:dark;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#e4dfc9;--pn:#d6d0b5;--pn2:#cbc49f;--ln:#9d966f;--tx:#1f2316;--mu:#5c5c43;--am:#9a6200;--gr:#4a6a16;--er:#b3281a;--out:#c5d29a;--in:#ddd7b9;color-scheme:light}}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:15px/1.4 "Segoe UI",Roboto,Arial,sans-serif;display:flex;flex-direction:column}
+.mono,h2,.logo,.ph b,.stats,nav button{font-family:"Courier New",Consolas,monospace;text-transform:uppercase;letter-spacing:.08em}
+.top{display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--pn);border-bottom:3px solid var(--am);background-image:repeating-linear-gradient(135deg,#0000 0 10px,#ffffff0a 10px 20px)}
+.logo{font-weight:700;font-size:18px;color:var(--am);line-height:1.1}.logo small{display:block;font-size:10px;color:var(--mu);letter-spacing:.14em}
+.stats{flex:1;display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--gr);justify-content:flex-end}
+.ib{background:none;border:0;color:var(--tx);font-size:22px;line-height:1;padding:6px 8px;cursor:pointer}
+.alert{background:var(--er);color:#fff;padding:8px 12px;font-weight:700;cursor:pointer;text-align:center}
+#app{flex:1;min-height:0;position:relative}
+.pane{position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg)}.pane.on{display:flex}
+.ph{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--pn2);border-bottom:1px solid var(--ln);min-height:50px}
+.ph b{flex:1;font-size:13px;color:var(--am)}
+.sb,.btn{background:var(--pn);color:var(--tx);border:1px solid var(--ln);border-radius:3px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
+.btn.p,.sb.p{background:var(--am);color:#1a1405;border-color:var(--am);font-weight:700}
+button:focus-visible,input:focus-visible,select:focus-visible,.row:focus-visible{outline:2px solid var(--am);outline-offset:2px}
+.body{flex:1;overflow-y:auto}
+.row{display:flex;gap:12px;padding:10px 12px;cursor:pointer;align-items:center;border-bottom:1px solid var(--ln)}.row:hover,.row.sel{background:var(--pn)}
+.av{width:42px;height:42px;border-radius:4px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex:none;border:1px solid var(--ln)}
+.mid{flex:1;min-width:0}.t{display:flex;justify-content:space-between;gap:8px;align-items:center}.t small{color:var(--mu);font-size:12px}
+.pv{color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.bd{background:var(--am);color:#1a1405;border-radius:3px;font-size:12px;font-style:normal;min-width:20px;text-align:center;padding:1px 6px;font-weight:700}
+.empty{margin:auto;color:var(--mu);padding:24px;text-align:center}
+.cc{display:flex;flex-direction:column;flex:1;min-height:0}
+.who{flex:1;min-width:0}.who b{display:block;font-weight:600}.who small{color:var(--mu);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msgs{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:5px;background:var(--bg)}
+.b{max-width:82%;padding:6px 9px 4px;border-radius:3px;background:var(--in);border:1px solid var(--ln);overflow-wrap:anywhere}
+.b.o{align-self:flex-end;background:var(--out)}.b .sn{display:block;color:var(--am);font-weight:700;font-size:12px}
+.sys{align-self:center;color:var(--mu);font-size:12px;border:1px dashed var(--ln);padding:3px 10px;border-radius:3px;text-align:center}
+.mt{display:block;text-align:right;color:var(--mu);font-size:11px}
+.lc{display:flex;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--ln);padding:7px 10px;margin-bottom:3px;cursor:pointer}.lc span{font-size:22px}.lc small{display:block;color:var(--mu);font-size:12px}
+.vb{display:flex;align-items:center;gap:8px}.vb button{background:var(--am);color:#1a1405;border:0;border-radius:50%;width:32px;height:32px;cursor:pointer}
+.att{display:flex;flex-wrap:wrap;gap:8px;padding:8px 10px;background:var(--pn);border-top:1px solid var(--ln)}
+.bar{display:flex;gap:6px;padding:8px;align-items:center;background:var(--pn2);border-top:1px solid var(--ln)}
+.bar input{flex:1;min-width:0;border:1px solid var(--ln);border-radius:3px;padding:10px;font:inherit;background:var(--bg);color:var(--tx)}
+.send{background:var(--am);color:#1a1405;border:0;border-radius:3px;width:42px;height:42px;font-size:18px;cursor:pointer;flex:none;font-weight:700}
+.mic{touch-action:none;user-select:none;-webkit-user-select:none;border:1px solid var(--ln);border-radius:3px;width:42px;height:42px}.mic.rec{background:var(--er);color:#fff}
+.mapw{flex:1;position:relative;min-height:0}.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;background:var(--bg);font:inherit;-webkit-tap-highlight-color:transparent}
+.leaflet-tile,.leaflet-marker-icon{user-select:none;-webkit-user-drag:none}.leaflet-marker-icon{display:block}
+.leaflet-container .leaflet-overlay-pane svg,.leaflet-container .leaflet-tile{max-width:none!important;max-height:none!important}
+.leaflet-container.leaflet-touch-zoom{touch-action:pan-x pan-y}.leaflet-container.leaflet-touch-drag{touch-action:none}
+.leaflet-tile{visibility:hidden}.leaflet-tile-loaded{visibility:inherit}
+.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-zoom-animated{transform-origin:0 0}svg.leaflet-zoom-animated{will-change:transform}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-zoom-anim .leaflet-tile,.leaflet-pan-anim .leaflet-tile{transition:none}.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden}
+.leaflet-interactive{cursor:pointer}.leaflet-grab{cursor:grab}.leaflet-dragging .leaflet-grab{cursor:move}
+.leaflet-marker-icon.leaflet-interactive,.leaflet-pane>svg path.leaflet-interactive{pointer-events:auto}
+.nd i{position:absolute;left:-7px;top:-7px;width:14px;height:14px;background:var(--mu);border:2px solid var(--tx);border-radius:2px}
+.nd.on i{background:var(--am)}.nd.sos i{background:var(--er);width:22px;height:22px;left:-11px;top:-11px;animation:pl 1.2s infinite}
+.nd.s i{outline:2px solid var(--tx);outline-offset:3px}.nd.me i{background:var(--gr);border-radius:50%}
+.nd span{position:absolute;left:14px;top:-9px;white-space:nowrap;font:12px Consolas,monospace;color:var(--tx);text-shadow:0 0 3px var(--bg),0 0 3px var(--bg),0 0 3px var(--bg)}
+.nd.fl b{position:absolute;left:-4px;top:-26px;font-size:24px}
+.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}.leaflet-popup-content-wrapper{padding:1px;text-align:left;border-radius:4px;background:var(--pn);color:var(--tx);border:1px solid var(--am)}.leaflet-popup-content{margin:10px 28px 10px 14px;line-height:1.4}.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-top:-1px;margin-left:-20px;overflow:hidden;pointer-events:none}.leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;transform:rotate(45deg);background:var(--pn);border:1px solid var(--am)}.leaflet-popup-close-button{position:absolute;top:0;right:0;padding:4px 8px;color:var(--mu);text-decoration:none;font-size:18px}
+.leaflet-fade-anim .leaflet-popup{opacity:0;transition:opacity .2s linear}.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-bottom{bottom:0}.leaflet-right{right:0}.leaflet-right .leaflet-control{float:right}
+.leaflet-control-attribution{background:var(--pn);color:var(--mu);font-size:11px;padding:0 5px}.leaflet-control-attribution a{color:var(--am)}
+@keyframes pl{50%{box-shadow:0 0 0 8px #e0513a44}}
+.lg{z-index:1000;position:absolute;left:8px;bottom:8px;background:var(--pn);border:1px solid var(--ln);padding:3px 8px;font-size:12px;color:var(--mu)}
+.nl{max-height:38%;overflow-y:auto;border-top:2px solid var(--am);background:var(--pn)}
+.nr{display:flex;gap:8px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--ln);cursor:pointer;font-size:13px}
+.nr i{width:10px;height:10px;border-radius:50%;flex:none}.nr span{flex:1}.nr small{color:var(--mu)}
+nav{display:flex;background:var(--pn);border-top:3px solid var(--am)}
+nav button{flex:1;padding:12px 4px;border:0;background:none;color:var(--mu);font-size:12px;cursor:pointer}nav button.on{color:var(--am);font-weight:700}
+.modal{position:fixed;inset:0;background:#000a;z-index:20;display:flex;align-items:center;justify-content:center;padding:14px}
+.mbox{background:var(--pn);border:2px solid var(--am);border-radius:4px;padding:14px;width:100%;max-width:440px;max-height:90%;overflow-y:auto;display:flex;flex-direction:column;gap:9px}
+h2{margin:0;font-size:15px;color:var(--am)}.mu{color:var(--mu);margin:0;font-size:13px}
+.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mu)}
+.mbox input[type=text],.mbox select{font:inherit;padding:8px;border:1px solid var(--ln);border-radius:3px;background:var(--bg);color:var(--tx)}
+.chip{display:flex;align-items:center;gap:10px;padding:6px 2px;border-bottom:1px solid var(--ln)}.chip span{flex:1}
+.acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.code{font-size:24px;color:var(--am);text-align:center;border:1px dashed var(--am);padding:8px}
+@media(min-width:900px){#app{display:grid;grid-template-columns:290px minmax(0,1fr) 400px}.pane{position:static;display:flex!important;border-right:2px solid var(--ln)}nav,.bk{display:none}}
+</style>
 </head>
-<body class="h-screen flex flex-col md:flex-row overflow-hidden text-sm">
-
-    <!-- LEFT SECTION: MAP & TERMINAL -->
-    <div class="flex-1 flex flex-col h-full relative">
-        
-        <!-- HEADER / TOOLBAR -->
-        <header class="bg-cyber-panel border-b border-cyber-border p-3 flex flex-wrap items-center justify-between z-20 gap-2">
-            <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-lg">
-                    <i class="fa-solid fa-walkie-talkie animate-pulse"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-base tracking-wide text-white flex items-center gap-2">
-                        RÁDIO PTT TÁTICO & MAPA MESH <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded border border-emerald-500/30">915 MHz</span>
-                    </h1>
-                    <p class="text-xs text-cyber-muted">Comunicação Posição-a-Posição com Transmissão PTT e Rede LoRa</p>
-                </div>
-            </div>
-
-            <!-- QUICK CONTROLS -->
-            <div class="flex items-center space-x-2">
-                <button onclick="sendMyLocation()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded flex items-center gap-2 text-xs font-semibold transition">
-                    <i class="fa-solid fa-location-crosshairs"></i> Transmitir Posição
-                </button>
-                <button onclick="triggerSOS()" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded flex items-center gap-2 text-xs font-bold transition animate-pulse">
-                    <i class="fa-solid fa-triangle-exclamation"></i> S.O.S
-                </button>
-                <button onclick="toggleLogsModal()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded flex items-center gap-2 text-xs border border-gray-700">
-                    <i class="fa-solid fa-terminal text-cyan-400"></i> Terminal RF
-                </button>
-            </div>
-        </header>
-
-        <!-- MAP CONTAINER -->
-        <div class="flex-1 relative w-full h-full">
-            <div id="map" class="w-full h-full z-0"></div>
-
-            <!-- MAP OVERLAY CONTROLS -->
-            <div class="absolute top-4 right-4 z-10 bg-cyber-panel/90 backdrop-blur-md p-3 rounded-lg border border-cyber-border max-w-xs shadow-xl text-xs space-y-2">
-                <div class="font-semibold text-emerald-400 flex items-center justify-between">
-                    <span><i class="fa-solid fa-layer-group"></i> Camadas Mesh</span>
-                    <span id="node-count-badge" class="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded text-[10px]">0 Nós</span>
-                </div>
-                <div class="space-y-1 text-gray-300">
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="chk-coverage" checked onchange="toggleCoverageCircles()" class="accent-emerald-500">
-                        <span>Exibir Raio de Cobertura RF</span>
-                    </label>
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" id="chk-links" checked onchange="toggleMeshLinks()" class="accent-emerald-500">
-                        <span>Exibir Enlaces Mesh (Links)</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- HUD BOTTOM LEFT -->
-            <div class="absolute bottom-4 left-4 z-10 bg-cyber-panel/90 backdrop-blur-md p-3 rounded-lg border border-cyber-border text-xs text-gray-300 flex items-center space-x-4 shadow-xl">
-                <div>
-                    <span class="text-cyber-muted block text-[10px]">COORDENADAS GPS</span>
-                    <span id="hud-coords" class="font-mono text-emerald-400">00.0000, 00.0000</span>
-                </div>
-                <div class="border-l border-gray-800 pl-4">
-                    <span class="text-cyber-muted block text-[10px]">MODO RÁDIO</span>
-                    <span id="hud-radio-mode" class="text-cyan-400 font-mono font-bold">CANAL 1 (ABERTO)</span>
-                </div>
-                <div class="border-l border-gray-800 pl-4">
-                    <span class="text-cyber-muted block text-[10px]">ESTADO PTT</span>
-                    <span id="hud-ptt-status" class="text-emerald-400 font-bold flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> REPOUSO (RX)
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <!-- LOWER TERMINAL LOG -->
-        <div id="terminal-panel" class="bg-cyber-panel border-t border-cyber-border h-36 flex flex-col font-mono text-xs">
-            <div class="bg-gray-900/80 px-3 py-1 border-b border-cyber-border flex justify-between items-center text-gray-400">
-                <span class="flex items-center gap-2 text-emerald-400 font-bold text-[11px]">
-                    <i class="fa-solid fa-code"></i> TERMINAL DE PACOTES DE RÁDIO & LORA
-                </span>
-                <button onclick="clearLogs()" class="hover:text-white text-[10px]"><i class="fa-solid fa-trash-can"></i> Limpar</button>
-            </div>
-            <div id="log-output" class="flex-1 p-2 overflow-y-auto space-y-1 bg-black/60 text-emerald-400 text-[11px] radar-grid">
-            </div>
-        </div>
-    </div>
-
-    <!-- RIGHT SECTION: PTT RADIO CONTROLLER, CONTACTS & CHAT -->
-    <div class="w-full md:w-[420px] bg-cyber-panel border-l border-cyber-border flex flex-col h-full z-20">
-        
-        <!-- NAVIGATION TABS -->
-        <div class="flex border-b border-cyber-border bg-gray-900/60 text-xs font-bold">
-            <button id="tab-btn-radio" onclick="switchTab('radio')" class="flex-1 py-2.5 text-emerald-400 border-b-2 border-emerald-500 flex items-center justify-center gap-2 bg-cyber-card/40">
-                <i class="fa-solid fa-microphone-lines"></i> RÁDIO PTT
-            </button>
-            <button id="tab-btn-contacts" onclick="switchTab('contacts')" class="flex-1 py-2.5 text-gray-400 border-b-2 border-transparent hover:text-gray-200 flex items-center justify-center gap-2">
-                <i class="fa-solid fa-address-book"></i> CONTATOS <span id="badge-contacts-count" class="bg-emerald-950 text-emerald-400 px-1.5 py-0.2 rounded-full text-[10px]">0</span>
-            </button>
-            <button id="tab-btn-chat" onclick="switchTab('chat')" class="flex-1 py-2.5 text-gray-400 border-b-2 border-transparent hover:text-gray-200 flex items-center justify-center gap-2">
-                <i class="fa-solid fa-comments"></i> CHATS LORA
-            </button>
-        </div>
-
-        <!-- TAB 1: PTT RADIO CONTROLLER -->
-        <div id="tab-content-radio" class="flex-1 flex flex-col p-3 space-y-3 overflow-y-auto bg-cyber-bg">
-            
-            <!-- RADIO CHANNEL & FREQUENCY PANEL -->
-            <div class="bg-cyber-card border border-cyber-border rounded-xl p-3 space-y-3 shadow-md">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs text-cyber-muted font-bold flex items-center gap-1.5">
-                        <i class="fa-solid fa-tower-broadcast text-emerald-400"></i> CANAL ATIVO DO RÁDIO
-                    </span>
-                    <span id="radio-signal-indicator" class="text-[11px] text-emerald-400 flex items-center gap-1 font-mono">
-                        <i class="fa-solid fa-signal"></i> SINAL EXCELENTE
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-[10px] text-cyber-muted block mb-1">SELETOR DE CANAL</label>
-                        <select id="radio-channel-select" onchange="changeChannel()" class="w-full bg-cyber-panel border border-cyber-border rounded-lg px-2.5 py-1.5 text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 text-xs">
-                            <option value="1">CANAL 1 - TÁTICO GERAL</option>
-                            <option value="2">CANAL 2 - EMERGÊNCIA</option>
-                            <option value="3">CANAL 3 - LOGÍSTICA</option>
-                            <option value="4">CANAL 4 - PATRULHA / RECON</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-cyber-muted block mb-1">DESTINO / PRIVADO</label>
-                        <select id="radio-target-select" onchange="changeRadioTarget()" class="w-full bg-cyber-panel border border-cyber-border rounded-lg px-2.5 py-1.5 text-cyan-400 font-bold focus:outline-none focus:border-cyan-500 text-xs">
-                            <option value="BROADCAST">CANAL ABERTO (TODOS)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- FREQUENCY & SQUELCH INFO -->
-                <div class="flex justify-between items-center bg-gray-950/70 p-2 rounded-lg font-mono text-[11px] text-gray-300">
-                    <div>FREQ: <span id="disp-freq" class="text-emerald-400 font-bold">915.000 MHz</span></div>
-                    <div>SQUELCH: <span class="text-cyan-400 font-bold">AUTO</span></div>
-                    <div>MOD: <span class="text-amber-400 font-bold">LoRa PTT</span></div>
-                </div>
-            </div>
-
-            <!-- AUDIO VISUALIZER / VU METER -->
-            <div class="bg-cyber-card border border-cyber-border rounded-xl p-3 flex flex-col items-center justify-center space-y-2">
-                <div class="w-full flex justify-between items-center text-[10px] text-cyber-muted font-mono">
-                    <span>TRANSMISSÃO DE VOZ (AUDIO VU)</span>
-                    <span id="vu-db-text" class="text-emerald-400 font-bold">-60 dB</span>
-                </div>
-
-                <!-- SPECTRUM CANVAS -->
-                <canvas id="audio-wave-canvas" class="w-full h-16 bg-black/80 rounded-lg border border-gray-800"></canvas>
-
-                <!-- VU METER BARS -->
-                <div class="w-full flex gap-1 h-3">
-                    <div id="vu-1" class="flex-1 bg-gray-800 rounded"></div>
-                    <div id="vu-2" class="flex-1 bg-gray-800 rounded"></div>
-                    <div id="vu-3" class="flex-1 bg-gray-800 rounded"></div>
-                    <div id="vu-4" class="flex-1 bg-gray-800 rounded"></div>
-                    <div id="vu-5" class="flex-1 bg-gray-800 rounded"></div>
-                    <div id="vu-6" class="flex-1 bg-gray-800 rounded"></div>
-                    <div id="vu-7" class="flex-1 bg-gray-800 rounded"></div>
-                    <div id="vu-8" class="flex-1 bg-gray-800 rounded"></div>
-                </div>
-            </div>
-
-            <!-- PUSH TO TALK BUTTON -->
-            <div class="flex-1 flex flex-col items-center justify-center py-2">
-                <button id="btn-ptt" 
-                        onmousedown="startPTT()" 
-                        onmouseup="stopPTT()" 
-                        mouseleave="stopPTT()"
-                        ontouchstart="startPTT(event)" 
-                        ontouchend="stopPTT(event)"
-                        class="w-44 h-44 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-800 border-4 border-emerald-400/60 shadow-2xl flex flex-col items-center justify-center transition-all transform active:scale-95 cursor-pointer select-none">
-                    <i id="ptt-icon" class="fa-solid fa-microphone text-4xl text-white mb-2"></i>
-                    <span id="ptt-label" class="font-black text-sm tracking-widest text-white uppercase">PUSH TO TALK</span>
-                    <span class="text-[10px] text-emerald-200 mt-1">Pressione e Segure</span>
-                </button>
-            </div>
-
-            <!-- QUICK CALL CONTACTS IN RADIO PAGE -->
-            <div class="bg-cyber-card border border-cyber-border rounded-xl p-2.5 space-y-1.5">
-                <span class="text-[10px] text-cyber-muted font-bold block uppercase tracking-wider">
-                    <i class="fa-solid fa-bolt text-amber-400"></i> Chamada Rápida PTT
-                </span>
-                <div id="quick-contacts-container" class="flex gap-2 overflow-x-auto pb-1">
-                    <!-- Chips inserted dynamically -->
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 2: CONTACTS LIST (AGENDA) -->
-        <div id="tab-content-contacts" class="flex-1 flex flex-col p-3 space-y-3 hidden overflow-y-auto bg-cyber-bg">
-            <!-- QR CODE ACTION BUTTONS -->
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="openMyQrModal()" class="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md">
-                    <i class="fa-solid fa-qrcode text-base"></i> Meu QR Code
-                </button>
-                <button onclick="openScanQrModal()" class="bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 text-white p-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md">
-                    <i class="fa-solid fa-camera text-base"></i> Escanear QR
-                </button>
-            </div>
-
-            <div class="flex justify-between items-center gap-2">
-                <div class="relative flex-1">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-500 text-xs"></i>
-                    <input type="text" id="contact-search-input" onkeyup="filterContacts()" placeholder="Buscar contatos ou nós..." class="w-full bg-cyber-card border border-cyber-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500">
-                </div>
-                <button onclick="openAddContactModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1">
-                    <i class="fa-solid fa-user-plus"></i> Manual
-                </button>
-            </div>
-
-            <!-- CONTACTS LIST CONTAINER -->
-            <div id="contacts-list" class="space-y-2 flex-1 overflow-y-auto">
-                <!-- Contact Cards dynamically rendered -->
-            </div>
-        </div>
-
-        <!-- TAB 3: CHAT & TEXT MESSAGES -->
-        <div id="tab-content-chat" class="flex-1 flex flex-col hidden bg-cyber-bg overflow-hidden">
-            <div class="p-2.5 bg-gray-900/80 border-b border-cyber-border flex justify-between items-center text-xs">
-                <div class="flex items-center gap-2">
-                    <span class="text-cyber-muted">Para:</span>
-                    <select id="chat-target-node" class="bg-cyber-card border border-cyber-border text-emerald-400 font-bold rounded px-2 py-0.5 focus:outline-none text-xs">
-                        <option value="BROADCAST">BROADCAST (Todos)</option>
-                    </select>
-                </div>
-                <span id="channel-status" class="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50">Livre</span>
-            </div>
-
-            <!-- CHAT MESSAGES CONTAINER -->
-            <div id="chat-box" class="flex-1 p-3 overflow-y-auto space-y-3 text-xs">
-                <!-- Messages populated dynamically -->
-            </div>
-
-            <!-- CHAT INPUT FORM -->
-            <div class="p-3 bg-cyber-panel border-t border-cyber-border space-y-2">
-                <div class="flex gap-2">
-                    <input type="text" id="chat-input" placeholder="Enviar mensagem de texto LoRa..." 
-                           class="flex-1 bg-cyber-card border border-cyber-border rounded-lg px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500 text-xs"
-                           onkeypress="if(event.key === 'Enter') sendMessage()">
-                    <button onclick="sendMessage()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-1 transition">
-                        <i class="fa-solid fa-paper-plane"></i>
-                    </button>
-                </div>
-                <div class="flex justify-between items-center text-[10px] text-cyber-muted">
-                    <span><i class="fa-solid fa-shield-halved text-emerald-400"></i> Criptografia AES-128</span>
-                    <span id="payload-calc" class="font-mono">0 / 222 Bytes</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ADD CONTACT MODAL -->
-    <div id="modal-add-contact" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-cyber-panel border border-cyber-border rounded-xl max-w-sm w-full p-4 space-y-4 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-cyber-border pb-2">
-                <h3 class="font-bold text-emerald-400 flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-user-plus"></i> Adicionar Novo Contato Rádio
-                </h3>
-                <button onclick="closeAddContactModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="space-y-3 text-xs">
-                <div>
-                    <label class="text-cyber-muted block mb-1">Nome do Operador</label>
-                    <input type="text" id="new-contact-name" placeholder="Ex: Operador Echo" class="w-full bg-cyber-card border border-cyber-border rounded px-2.5 py-1.5 text-gray-200 focus:outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="text-cyber-muted block mb-1">ID do Nó / Call-sign</label>
-                    <input type="text" id="new-contact-id" placeholder="Ex: NODE-ECHO" class="w-full bg-cyber-card border border-cyber-border rounded px-2.5 py-1.5 text-gray-200 focus:outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="text-cyber-muted block mb-1">Função / Função Tática</label>
-                    <input type="text" id="new-contact-role" placeholder="Ex: Patrulha Avançada" class="w-full bg-cyber-card border border-cyber-border rounded px-2.5 py-1.5 text-gray-200 focus:outline-none focus:border-emerald-500">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-cyber-muted block mb-1">Latitude</label>
-                        <input type="number" step="0.0001" id="new-contact-lat" placeholder="-23.550" class="w-full bg-cyber-card border border-cyber-border rounded px-2.5 py-1.5 text-gray-200 focus:outline-none focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="text-cyber-muted block mb-1">Longitude</label>
-                        <input type="number" step="0.0001" id="new-contact-lng" placeholder="-46.633" class="w-full bg-cyber-card border border-cyber-border rounded px-2.5 py-1.5 text-gray-200 focus:outline-none focus:border-emerald-500">
-                    </div>
-                </div>
-            </div>
-            <div class="flex justify-end space-x-2 pt-2 border-t border-cyber-border">
-                <button onclick="closeAddContactModal()" class="px-3 py-1.5 bg-gray-800 text-gray-300 rounded text-xs">Cancelar</button>
-                <button onclick="saveNewContact()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold text-xs">Salvar Contato</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: MEU QR CODE & QR DA FAMÍLIA -->
-    <div id="modal-my-qr" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-cyber-panel border border-cyber-border rounded-xl max-w-sm w-full p-4 space-y-4 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-cyber-border pb-2">
-                <h3 class="font-bold text-emerald-400 flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-qrcode"></i> QR Code do Operador e Família
-                </h3>
-                <button onclick="closeMyQrModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-
-            <!-- TOGGLE PERFIL / GRUPO FAMÍLIA -->
-            <div class="flex bg-cyber-card p-1 rounded-lg text-xs font-bold border border-cyber-border">
-                <button id="qr-tab-profile" onclick="switchQrType('profile')" class="flex-1 py-1.5 rounded-md text-emerald-400 bg-cyber-panel">
-                    <i class="fa-solid fa-user"></i> Meu Perfil
-                </button>
-                <button id="qr-tab-family" onclick="switchQrType('family')" class="flex-1 py-1.5 rounded-md text-gray-400 hover:text-white">
-                    <i class="fa-solid fa-people-roof"></i> Rede Família
-                </button>
-            </div>
-
-            <div class="flex flex-col items-center justify-center space-y-3 py-2">
-                <div id="qrcode-container" class="bg-white p-3 rounded-xl shadow-lg flex items-center justify-center min-w-[180px] min-h-[180px]"></div>
-                <div class="text-center">
-                    <span id="qr-title-display" class="font-bold text-emerald-400 text-sm block">OPERADOR ALPHA</span>
-                    <span id="qr-desc-display" class="text-[11px] text-cyber-muted block">Escaneie para adicionar à sua lista de contatos LoRa</span>
-                </div>
-            </div>
-
-            <div class="flex justify-end pt-2 border-t border-cyber-border">
-                <button onclick="closeMyQrModal()" class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold text-xs">
-                    Concluído
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: ESCANEAR QR CODE (CÂMERA & ARQUIVO) -->
-    <div id="modal-scan-qr" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-cyber-panel border border-cyber-border rounded-xl max-w-sm w-full p-4 space-y-4 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-cyber-border pb-2">
-                <h3 class="font-bold text-cyan-400 flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-camera"></i> Escanear Contato ou Família
-                </h3>
-                <button onclick="closeScanQrModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-
-            <!-- SCANNER CAMERA CONTAINER -->
-            <div id="qr-reader-container" class="space-y-3">
-                <div id="qr-reader" class="w-full bg-black rounded-xl overflow-hidden border border-cyber-border min-h-[220px]"></div>
-                <div class="text-center text-[11px] text-cyber-muted">
-                    Aponte a câmera para o QR Code de um operador ou da família.
-                </div>
-            </div>
-
-            <!-- FILE UPLOAD OPTION -->
-            <div class="pt-2 border-t border-cyber-border flex flex-col gap-2">
-                <label class="text-[10px] text-cyber-muted font-bold block">OU CARREGUE DA GALERIA DE FOTOS:</label>
-                <input type="file" id="qr-file-input" accept="image/*" onchange="scanQrFromFile(event)" class="text-xs text-gray-300 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyber-card file:text-cyan-400 hover:file:bg-gray-800">
-            </div>
-
-            <div class="flex justify-end pt-2 border-t border-cyber-border">
-                <button onclick="closeScanQrModal()" class="w-full py-1.5 bg-gray-800 text-gray-300 rounded font-bold text-xs">
-                    Fechar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- JAVASCRIPT APP LOGIC -->
-    <script>
-        // --- DATA & STATE MANAGEMENT ---
-        const MY_NODE_ID = "NODE-ALPHA";
-        let myLocation = [-23.5505, -46.6333];
-
-        let defaultContacts = [
-            { id: "NODE-BRAVO", name: "Operador Bravo", role: "Repetidor Base", callsign: "TOWER-1", channel: "1", lat: -23.5420, lng: -46.6210, battery: "100%", status: "online", avatar: "B", rssi: -82, snr: 10.5 },
-            { id: "NODE-CHARLIE", name: "Operador Charlie", role: "Patrulha Móvel", callsign: "SCOUT-2", channel: "1", lat: -23.5610, lng: -46.6500, battery: "84%", status: "online", avatar: "C", rssi: -95, snr: 7.2 },
-            { id: "NODE-DELTA", name: "Posto Delta", role: "Telemetria & Apoio", callsign: "BASE-4", channel: "2", lat: -23.5300, lng: -46.6600, battery: "62%", status: "online", avatar: "D", rssi: -105, snr: 4.0 },
-            { id: "NODE-ECHO", name: "Operador Echo", role: "Suporte Logístico", callsign: "LOG-1", channel: "3", lat: -23.5700, lng: -46.6100, battery: "15%", status: "offline", avatar: "E", rssi: -118, snr: 1.2 }
-        ];
-
-        let contacts = loadSavedContacts();
-
-        let currentActiveChannel = "1";
-        let currentRadioTarget = "BROADCAST";
-        let isPTTActive = false;
-
-        let map, myMarker;
-        let nodeMarkers = {};
-        let coverageCircles = {};
-        let meshLines = [];
-
-        // QR Code Scanner Instance
-        let html5QrCodeScanner = null;
-
-        // WEB AUDIO API FOR WALKIE TALKIE SOUNDS
-        let audioCtx = null;
-        let pttOscillator = null;
-        let pttNoiseNode = null;
-        let animFrameId = null;
-
-        // LOCAL STORAGE FUNCTIONS
-        function loadSavedContacts() {
-            try {
-                const saved = localStorage.getItem('lora_contacts');
-                return saved ? JSON.parse(saved) : defaultContacts;
-            } catch(e) {
-                return defaultContacts;
-            }
-        }
-
-        function saveContactsToStorage() {
-            try {
-                localStorage.setItem('lora_contacts', JSON.stringify(contacts));
-            } catch(e) {
-                console.error("Erro ao salvar contatos:", e);
-            }
-        }
-
-        // --- INITIALIZATION ---
-        window.onload = function() {
-            initMap();
-            initGeolocation();
-            renderContactsList();
-            renderQuickContacts();
-            updateTargetDropdowns();
-            initAudioCanvas();
-            
-            addSystemLog("SISTEMA DE RÁDIO PTT & REDE LORA MESH INICIALIZADO.");
-            addSystemLog("Frequência Principal: 915.000 MHz | Canal 1 Ativo.");
-
-            document.getElementById('chat-input').addEventListener('input', function(e) {
-                const bytes = new Blob([e.target.value]).size;
-                document.getElementById('payload-calc').innerText = `${bytes} / 222 Bytes`;
-            });
-        };
-
-        // --- QR CODE GENERATOR & SCANNER LOGIC ---
-        let currentQrMode = 'profile';
-
-        function openMyQrModal() {
-            document.getElementById('modal-my-qr').classList.remove('hidden');
-            generateQrCode();
-        }
-
-        function closeMyQrModal() {
-            document.getElementById('modal-my-qr').classList.add('hidden');
-        }
-
-        function switchQrType(mode) {
-            currentQrMode = mode;
-            const profileBtn = document.getElementById('qr-tab-profile');
-            const familyBtn = document.getElementById('qr-tab-family');
-
-            if (mode === 'profile') {
-                profileBtn.className = "flex-1 py-1.5 rounded-md text-emerald-400 bg-cyber-panel font-bold";
-                familyBtn.className = "flex-1 py-1.5 rounded-md text-gray-400 hover:text-white";
-                document.getElementById('qr-title-display').innerText = "OPERADOR ALPHA";
-                document.getElementById('qr-desc-display').innerText = "Escaneie para adicionar este operador aos contatos";
-            } else {
-                familyBtn.className = "flex-1 py-1.5 rounded-md text-emerald-400 bg-cyber-panel font-bold";
-                profileBtn.className = "flex-1 py-1.5 rounded-md text-gray-400 hover:text-white";
-                document.getElementById('qr-title-display').innerText = "REDE DA FAMÍLIA (LORA CANAL 1)";
-                document.getElementById('qr-desc-display').innerText = "Escaneie para ingressar na rede segura e contatos da família";
-            }
-            generateQrCode();
-        }
-
-        function generateQrCode() {
-            const container = document.getElementById('qrcode-container');
-            container.innerHTML = '';
-
-            let payloadData = {};
-            if (currentQrMode === 'profile') {
-                payloadData = {
-                    type: "LORA_CONTACT",
-                    id: MY_NODE_ID,
-                    name: "Operador Alpha",
-                    callsign: "ALPHA-1",
-                    role: "Líder de Família",
-                    channel: "1",
-                    lat: myLocation[0],
-                    lng: myLocation[1]
-                };
-            } else {
-                payloadData = {
-                    type: "LORA_FAMILY_GROUP",
-                    familyName: "Família Silva Mesh",
-                    channel: "1",
-                    freq: "915.000",
-                    members: [
-                        { id: "NODE-FAM-1", name: "Pai / Base Alpha", callsign: "BASE-SILVA", role: "Casa / Base", channel: "1", lat: myLocation[0] + 0.002, lng: myLocation[1] + 0.002 },
-                        { id: "NODE-FAM-2", name: "Mãe / Móvel", callsign: "SILVA-2", role: "Carro / Móvel", channel: "1", lat: myLocation[0] - 0.003, lng: myLocation[1] + 0.004 }
-                    ]
-                };
-            }
-
-            new QRCode(container, {
-                text: JSON.stringify(payloadData),
-                width: 170,
-                height: 170,
-                colorDark : "#080c14",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.M
-            });
-        }
-
-        function openScanQrModal() {
-            document.getElementById('modal-scan-qr').classList.remove('hidden');
-            setTimeout(initCameraScanner, 300);
-        }
-
-        function closeScanQrModal() {
-            if (html5QrCodeScanner) {
-                html5QrCodeScanner.stop().catch(() => {}).then(() => {
-                    html5QrCodeScanner = null;
-                    document.getElementById('modal-scan-qr').classList.add('hidden');
-                });
-            } else {
-                document.getElementById('modal-scan-qr').classList.add('hidden');
-            }
-        }
-
-        function initCameraScanner() {
-            if (html5QrCodeScanner) return;
-            html5QrCodeScanner = new Html5Qrcode("qr-reader");
-            html5QrCodeScanner.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 200, height: 200 } },
-                onQrReadSuccess,
-                () => {}
-            ).catch(err => {
-                console.warn("Câmera indisponível:", err);
-            });
-        }
-
-        function scanQrFromFile(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const html5QrCode = new Html5Qrcode("qr-reader");
-            html5QrCode.scanFile(file, true)
-                .then(decodedText => {
-                    onQrReadSuccess(decodedText);
-                })
-                .catch(err => {
-                    alert("Não foi possível identificar um QR Code válido na imagem.");
-                });
-        }
-
-        function onQrReadSuccess(decodedText) {
-            closeScanQrModal();
-            try {
-                const data = JSON.parse(decodedText);
-                if (data.type === "LORA_CONTACT") {
-                    addContactFromQr(data);
-                } else if (data.type === "LORA_FAMILY_GROUP") {
-                    addFamilyGroupFromQr(data);
-                } else {
-                    alert("QR Code lido, mas não contém formato do Rádio LoRa.");
-                }
-            } catch(e) {
-                alert("QR Code lido não é um formato válido do sistema LoRa.");
-            }
-        }
-
-        function addContactFromQr(data) {
-            if (contacts.some(c => c.id === data.id)) {
-                alert(`O contato ${data.name} já faz parte da sua lista.`);
-                return;
-            }
-
-            const newContact = {
-                id: data.id || `NODE-${Math.floor(Math.random()*899+100)}`,
-                name: data.name || "Novo Operador",
-                role: data.role || "Membro da Rede",
-                callsign: data.callsign || "TAC-NEW",
-                channel: data.channel || "1",
-                lat: data.lat || (myLocation[0] + 0.005),
-                lng: data.lng || (myLocation[1] + 0.005),
-                battery: "100%",
-                status: "online",
-                avatar: (data.name || "N").charAt(0).toUpperCase(),
-                rssi: -80,
-                snr: 10.0
-            };
-
-            contacts.push(newContact);
-            saveContactsToStorage();
-            renderContactMarker(newContact);
-            renderContactsList();
-            renderQuickContacts();
-            updateTargetDropdowns();
-            drawMeshLinks();
-
-            addSystemLog(`✅ CONTATO LIDO E ADICIONADO VIA QR CODE: ${newContact.name}`);
-            alert(`Contato ${newContact.name} adicionado com sucesso via QR Code!`);
-        }
-
-        function addFamilyGroupFromQr(groupData) {
-            let addedCount = 0;
-            groupData.members.forEach(member => {
-                if (!contacts.some(c => c.id === member.id)) {
-                    const newContact = {
-                        id: member.id,
-                        name: member.name,
-                        role: member.role || "Família",
-                        callsign: member.callsign,
-                        channel: member.channel || "1",
-                        lat: member.lat,
-                        lng: member.lng,
-                        battery: "100%",
-                        status: "online",
-                        avatar: member.name.charAt(0).toUpperCase(),
-                        rssi: -75,
-                        snr: 11.0
-                    };
-                    contacts.push(newContact);
-                    renderContactMarker(newContact);
-                    addedCount++;
-                }
-            });
-
-            if (addedCount > 0) {
-                saveContactsToStorage();
-                renderContactsList();
-                renderQuickContacts();
-                updateTargetDropdowns();
-                drawMeshLinks();
-                addSystemLog(`👨‍👩‍👧‍👦 GRUPO FAMILIAR ADICIONADO: ${groupData.familyName} (${addedCount} novos membros)`);
-                alert(`Você entrou no grupo familiar "${groupData.familyName}"! ${addedCount} membros adicionados.`);
-            } else {
-                alert(`Você já possui todos os membros do grupo "${groupData.familyName}" em seus contatos.`);
-            }
-        }
-
-        // --- WEB AUDIO API & PTT SOUND SYNTHESIS ---
-        function initAudioContext() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
-
-        // Play Walkie-Talkie Beep / Roger Beep
-        function playPttBeep(isStart) {
-            initAudioContext();
-            if(!audioCtx) return;
-
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            if (isStart) {
-                // High pitch short start beep
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.08);
-            } else {
-                // Classic Roger Beep (double tone)
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
-                osc.frequency.setValueAtTime(1400, audioCtx.currentTime + 0.06);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.15);
-            }
-        }
-
-        // --- PTT LOGIC ---
-        function startPTT(e) {
-            if(e) e.preventDefault();
-            if (isPTTActive) return;
-            
-            isPTTActive = true;
-            playPttBeep(true);
-
-            // UI Update
-            const pttBtn = document.getElementById('btn-ptt');
-            pttBtn.classList.add('ptt-active');
-            document.getElementById('ptt-icon').className = "fa-solid fa-tower-broadcast text-5xl text-white mb-2 animate-bounce";
-            document.getElementById('ptt-label').innerText = "TRANSMITINDO (TX)";
-            document.getElementById('hud-ptt-status').innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span> TRANSMITINDO (TX)`;
-            document.getElementById('hud-ptt-status').className = "text-red-400 font-bold flex items-center gap-1";
-
-            // Signal pulse on map
-            animateSignalPulse(myLocation[0], myLocation[1]);
-
-            // Draw audio waveform animation
-            drawAudioWave(true);
-
-            addSystemLog(`[PTT TX] Transmissão iniciada no CANAL ${currentActiveChannel} -> Destino: ${currentRadioTarget}`);
-        }
-
-        function stopPTT(e) {
-            if(e) e.preventDefault();
-            if (!isPTTActive) return;
-
-            isPTTActive = false;
-            playPttBeep(false);
-
-            // UI Reset
-            const pttBtn = document.getElementById('btn-ptt');
-            pttBtn.classList.remove('ptt-active');
-            document.getElementById('ptt-icon').className = "fa-solid fa-microphone text-4xl text-white mb-2";
-            document.getElementById('ptt-label').innerText = "PUSH TO TALK";
-            document.getElementById('hud-ptt-status').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> REPOUSO (RX)`;
-            document.getElementById('hud-ptt-status').className = "text-emerald-400 font-bold flex items-center gap-1";
-
-            drawAudioWave(false);
-
-            addSystemLog(`[PTT RX] Transmissão encerrada. Câmbio desativado.`);
-
-            // Simulate incoming voice / response if target isn't broadcast
-            simulatePTTResponse();
-        }
-
-        function simulatePTTResponse() {
-            setTimeout(() => {
-                if (Math.random() > 0.3) {
-                    playPttBeep(true);
-                    const responder = currentRadioTarget === "BROADCAST" ? contacts[0] : contacts.find(c => c.id === currentRadioTarget) || contacts[0];
-                    
-                    document.getElementById('hud-ptt-status').innerHTML = `<span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span> RECEBENDO (${responder.callsign})`;
-                    document.getElementById('hud-ptt-status').className = "text-cyan-400 font-bold flex items-center gap-1";
-                    
-                    drawAudioWave(true);
-                    addSystemLog(`[PTT RX] Voz recebida de ${responder.name} (${responder.callsign}) | RSSI: ${responder.rssi}dBm`);
-
-                    setTimeout(() => {
-                        playPttBeep(false);
-                        document.getElementById('hud-ptt-status').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> REPOUSO (RX)`;
-                        document.getElementById('hud-ptt-status').className = "text-emerald-400 font-bold flex items-center gap-1";
-                        drawAudioWave(false);
-                    }, 2500);
-                }
-            }, 1000);
-        }
-
-        // --- AUDIO VISUALIZER & VU METER ---
-        function initAudioCanvas() {
-            const canvas = document.getElementById('audio-wave-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            
-            ctx.fillStyle = "#000";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            drawFlatLine(ctx, canvas);
-        }
-
-        function drawFlatLine(ctx, canvas) {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height / 2);
-            ctx.lineTo(canvas.width, canvas.height / 2);
-            ctx.strokeStyle = "#10b981";
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            
-            updateVUMeter(0);
-        }
-
-        function drawAudioWave(active) {
-            const canvas = document.getElementById('audio-wave-canvas');
-            const ctx = canvas.getContext('2d');
-            
-            if (animFrameId) cancelAnimationFrame(animFrameId);
-            if (!active) {
-                drawFlatLine(ctx, canvas);
-                return;
-            }
-
-            let step = 0;
-            function animate() {
-                ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.beginPath();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = isPTTActive ? "#ef4444" : "#06b6d4";
-
-                const height = canvas.height;
-                const width = canvas.width;
-                step += 0.15;
-
-                for (let x = 0; x < width; x++) {
-                    const y = Math.sin(x * 0.05 + step) * Math.cos(x * 0.02 + step) * (height / 2.5) + (height / 2);
-                    if (x === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.stroke();
-
-                const simulatedVolume = Math.floor(Math.random() * 6) + 2;
-                updateVUMeter(simulatedVolume);
-
-                animFrameId = requestAnimationFrame(animate);
-            }
-            animate();
-        }
-
-        function updateVUMeter(level) {
-            for (let i = 1; i <= 8; i++) {
-                const bar = document.getElementById(`vu-${i}`);
-                if (i <= level) {
-                    if (i > 6) bar.className = "flex-1 bg-red-500 rounded";
-                    else if (i > 4) bar.className = "flex-1 bg-amber-400 rounded";
-                    else bar.className = "flex-1 bg-emerald-400 rounded";
-                } else {
-                    bar.className = "flex-1 bg-gray-800 rounded";
-                }
-            }
-            document.getElementById('vu-db-text').innerText = level > 0 ? `-${(9 - level) * 6} dB` : '-60 dB';
-        }
-
-        // --- MAP FUNCTIONS ---
-        function initMap() {
-            map = L.map('map', { zoomControl: false }).setView(myLocation, 13);
-
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap &copy; CARTO',
-                maxZoom: 19
-            }).addTo(map);
-
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-            // Click map to set new point
-            map.on('click', function(e) {
-                document.getElementById('new-contact-lat').value = e.latlng.lat.toFixed(4);
-                document.getElementById('new-contact-lng').value = e.latlng.lng.toFixed(4);
-                openAddContactModal();
-            });
-
-            renderMyMarker();
-            contacts.forEach(c => renderContactMarker(c));
-            drawMeshLinks();
-        }
-
-        function renderMyMarker() {
-            const iconHtml = `<div class="w-8 h-8 rounded-full bg-emerald-500/30 border-2 border-emerald-400 flex items-center justify-center text-emerald-300 font-bold shadow-lg animate-pulse"><i class="fa-solid fa-user-ninja text-xs"></i></div>`;
-            const customIcon = L.divIcon({ html: iconHtml, className: 'custom-div-icon', iconSize: [30, 30], iconAnchor: [15, 15] });
-
-            if(myMarker) map.removeLayer(myMarker);
-            myMarker = L.marker(myLocation, { icon: customIcon }).addTo(map);
-            myMarker.bindPopup(`<b>VOCÊ (Alpha)</b><br>Lat/Lng: ${myLocation[0].toFixed(4)}, ${myLocation[1].toFixed(4)}`);
-        }
-
-        function renderContactMarker(contact) {
-            const isOnline = contact.status === 'online';
-            const iconColor = isOnline ? 'cyan' : 'gray';
-            const iconHtml = `<div class="w-7 h-7 rounded-full bg-${iconColor}-500/30 border-2 border-${iconColor}-400 flex items-center justify-center text-${iconColor}-300 font-bold shadow-lg"><i class="fa-solid fa-walkie-talkie text-xs"></i></div>`;
-
-            const customIcon = L.divIcon({ html: iconHtml, className: 'custom-div-icon', iconSize: [30, 30], iconAnchor: [15, 15] });
-            const marker = L.marker([contact.lat, contact.lng], { icon: customIcon }).addTo(map);
-
-            marker.bindPopup(`
-                <div class="text-xs space-y-1">
-                    <div class="font-bold text-emerald-400 border-b border-gray-700 pb-1 flex justify-between">
-                        <span>${contact.name}</span>
-                        <span class="text-gray-400">${contact.callsign}</span>
-                    </div>
-                    <div><b>Função:</b> ${contact.role}</div>
-                    <div><b>Canal PTT:</b> Canal ${contact.channel}</div>
-                    <div><b>Sinal:</b> ${contact.rssi} dBm (${contact.snr} dB SNR)</div>
-                    <button onclick="callContactPTT('${contact.id}')" class="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] py-1 rounded font-bold">
-                        <i class="fa-solid fa-microphone"></i> Chamar via PTT
-                    </button>
-                </div>
-            `);
-
-            nodeMarkers[contact.id] = marker;
-
-            // Coverage
-            const circle = L.circle([contact.lat, contact.lng], {
-                color: '#06b6d4',
-                fillColor: '#06b6d4',
-                fillOpacity: 0.08,
-                weight: 1,
-                dashArray: '4, 4',
-                radius: 3500
-            }).addTo(map);
-
-            coverageCircles[contact.id] = circle;
-        }
-
-        function drawMeshLinks() {
-            meshLines.forEach(l => map.removeLayer(l));
-            meshLines = [];
-
-            if (!document.getElementById('chk-links').checked) return;
-
-            const allNodes = [{ lat: myLocation[0], lng: myLocation[1] }, ...contacts];
-            for (let i = 0; i < allNodes.length; i++) {
-                for (let j = i + 1; j < allNodes.length; j++) {
-                    const dist = calculateDistance(allNodes[i].lat, allNodes[i].lng, allNodes[j].lat, allNodes[j].lng);
-                    if (dist <= 8.0) {
-                        const line = L.polyline([
-                            [allNodes[i].lat, allNodes[i].lng],
-                            [allNodes[j].lat, allNodes[j].lng]
-                        ], { color: '#10b981', weight: 1, opacity: 0.3, dashArray: '3, 6' }).addTo(map);
-                        meshLines.push(line);
-                    }
-                }
-            }
-        }
-
-        function animateSignalPulse(lat, lng) {
-            const pulseCircle = L.circle([lat, lng], {
-                color: '#10b981',
-                fillColor: '#10b981',
-                fillOpacity: 0.4,
-                radius: 100
-            }).addTo(map);
-
-            let r = 100;
-            const interval = setInterval(() => {
-                r += 250;
-                pulseCircle.setRadius(r);
-                pulseCircle.setStyle({ fillOpacity: 0.4 * (1 - r / 4000) });
-                if (r >= 4000) {
-                    clearInterval(interval);
-                    map.removeLayer(pulseCircle);
-                }
-            }, 30);
-        }
-
-        // --- CONTACTS MANAGEMENT ---
-        function renderContactsList() {
-            const listContainer = document.getElementById('contacts-list');
-            listContainer.innerHTML = '';
-
-            document.getElementById('badge-contacts-count').innerText = contacts.length;
-            document.getElementById('node-count-badge').innerText = `${contacts.length + 1} Nós`;
-
-            contacts.forEach(contact => {
-                const dist = calculateDistance(myLocation[0], myLocation[1], contact.lat, contact.lng).toFixed(2);
-                const isOnline = contact.status === 'online';
-
-                const card = document.createElement('div');
-                card.className = "bg-cyber-card border border-cyber-border hover:border-emerald-500/50 p-2.5 rounded-xl transition flex items-center justify-between";
-                card.innerHTML = `
-                    <div class="flex items-center space-x-3">
-                        <div class="relative">
-                            <div class="w-9 h-9 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center font-bold text-emerald-400">
-                                ${contact.avatar}
-                            </div>
-                            <span class="w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-gray-500'} absolute bottom-0 right-0 border border-cyber-card"></span>
-                        </div>
-                        <div>
-                            <div class="font-bold text-gray-200 text-xs flex items-center gap-1.5">
-                                ${contact.name}
-                                <span class="bg-gray-800 text-cyan-400 text-[9px] px-1.5 py-0.2 rounded font-mono">${contact.callsign}</span>
-                            </div>
-                            <div class="text-[10px] text-cyber-muted">${contact.role} • Canal ${contact.channel}</div>
-                            <div class="text-[9px] text-emerald-400 font-mono">${dist} km | RSSI: ${contact.rssi}dBm</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <button onclick="callContactPTT('${contact.id}')" title="Chamar no PTT" class="p-2 bg-emerald-950/80 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg transition border border-emerald-800/50 text-xs">
-                            <i class="fa-solid fa-microphone"></i>
-                        </button>
-                        <button onclick="openChatWithContact('${contact.id}')" title="Enviar Mensagem LoRa" class="p-2 bg-cyan-950/80 text-cyan-400 hover:bg-cyan-600 hover:text-white rounded-lg transition border border-cyan-800/50 text-xs">
-                            <i class="fa-solid fa-comment text-xs"></i>
-                        </button>
-                    </div>
-                `;
-                listContainer.appendChild(card);
-            });
-        }
-
-        function renderQuickContacts() {
-            const container = document.getElementById('quick-contacts-container');
-            container.innerHTML = '';
-
-            contacts.forEach(c => {
-                const chip = document.createElement('button');
-                chip.onclick = () => callContactPTT(c.id);
-                chip.className = "flex-shrink-0 bg-cyber-panel border border-cyber-border hover:border-emerald-500 px-2.5 py-1.5 rounded-lg flex items-center gap-2 text-xs transition";
-                chip.innerHTML = `
-                    <span class="w-2 h-2 rounded-full ${c.status === 'online' ? 'bg-emerald-400' : 'bg-gray-500'}"></span>
-                    <span class="font-bold text-gray-200">${c.callsign}</span>
-                `;
-                container.appendChild(chip);
-            });
-        }
-
-        function filterContacts() {
-            const query = document.getElementById('contact-search-input').value.toLowerCase();
-            const cards = document.getElementById('contacts-list').children;
-            Array.from(cards).forEach(card => {
-                const text = card.innerText.toLowerCase();
-                card.style.display = text.includes(query) ? 'flex' : 'none';
-            });
-        }
-
-        function callContactPTT(contactId) {
-            switchTab('radio');
-            document.getElementById('radio-target-select').value = contactId;
-            changeRadioTarget();
-            addSystemLog(`Modo Privado Ativado para: ${contactId}. Pressione PTT para falar.`);
-        }
-
-        function openChatWithContact(contactId) {
-            switchTab('chat');
-            document.getElementById('chat-target-node').value = contactId;
-        }
-
-        function openAddContactModal() {
-            document.getElementById('modal-add-contact').classList.remove('hidden');
-        }
-
-        function closeAddContactModal() {
-            document.getElementById('modal-add-contact').classList.add('hidden');
-        }
-
-        function saveNewContact() {
-            const name = document.getElementById('new-contact-name').value.trim();
-            const id = document.getElementById('new-contact-id').value.trim() || `NODE-${Math.floor(Math.random()*899+100)}`;
-            const role = document.getElementById('new-contact-role').value.trim() || "Operador Mesh";
-            const lat = parseFloat(document.getElementById('new-contact-lat').value) || myLocation[0] + 0.01;
-            const lng = parseFloat(document.getElementById('new-contact-lng').value) || myLocation[1] + 0.01;
-
-            if(!name) return alert("Digite o nome do contato.");
-
-            const newContact = {
-                id: id,
-                name: name,
-                role: role,
-                callsign: id.replace('NODE-', 'TAC-'),
-                channel: "1",
-                lat: lat,
-                lng: lng,
-                battery: "100%",
-                status: "online",
-                avatar: name.charAt(0).toUpperCase(),
-                rssi: -88,
-                snr: 9.0
-            };
-
-            contacts.push(newContact);
-            saveContactsToStorage();
-            renderContactMarker(newContact);
-            renderContactsList();
-            renderQuickContacts();
-            updateTargetDropdowns();
-            drawMeshLinks();
-            closeAddContactModal();
-
-            addSystemLog(`NOVO CONTATO ADICIONADO: ${name} (${id})`);
-        }
-
-        // --- RADIO CHANNEL & TARGET CONTROLS ---
-        function changeChannel() {
-            currentActiveChannel = document.getElementById('radio-channel-select').value;
-            document.getElementById('hud-radio-mode').innerText = `CANAL ${currentActiveChannel} (${currentRadioTarget})`;
-            addSystemLog(`Frequência alterada para Canal ${currentActiveChannel}`);
-        }
-
-        function changeRadioTarget() {
-            currentRadioTarget = document.getElementById('radio-target-select').value;
-            document.getElementById('hud-radio-mode').innerText = `CANAL ${currentActiveChannel} (${currentRadioTarget})`;
-        }
-
-        function updateTargetDropdowns() {
-            const radioSelect = document.getElementById('radio-target-select');
-            const chatSelect = document.getElementById('chat-target-node');
-
-            radioSelect.innerHTML = '<option value="BROADCAST">CANAL ABERTO (TODOS)</option>';
-            chatSelect.innerHTML = '<option value="BROADCAST">BROADCAST (Todos)</option>';
-
-            contacts.forEach(c => {
-                const opt1 = document.createElement('option');
-                opt1.value = c.id;
-                opt1.innerText = `${c.name} (${c.callsign})`;
-                radioSelect.appendChild(opt1);
-
-                const opt2 = document.createElement('option');
-                opt2.value = c.id;
-                opt2.innerText = c.name;
-                chatSelect.appendChild(opt2);
-            });
-        }
-
-        // --- CHAT MESSAGING ---
-        function sendMessage() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if (!text) return;
-
-            const targetId = document.getElementById('chat-target-node').value;
-            animateSignalPulse(myLocation[0], myLocation[1]);
-
-            appendChatMessage({
-                sender: "Você (Alpha)",
-                target: targetId,
-                text: text,
-                isMe: true,
-                time: getCurrentTime(),
-                rssi: "-85 dBm",
-                snr: "9.5 dB",
-                hops: 1,
-                freq: "915.0 MHz"
-            });
-
-            addSystemLog(`[TX PACKET] Msg enviada para ${targetId}: "${text}"`);
-            input.value = '';
-            document.getElementById('payload-calc').innerText = '0 / 222 Bytes';
-        }
-
-        function sendMyLocation() {
-            switchTab('chat');
-            document.getElementById('chat-input').value = `📍 POSIÇÃO GPS: ${myLocation[0].toFixed(5)}, ${myLocation[1].toFixed(5)}`;
-            sendMessage();
-        }
-
-        function triggerSOS() {
-            switchTab('chat');
-            document.getElementById('chat-target-node').value = "BROADCAST";
-            document.getElementById('chat-input').value = `🚨 ALERTA SOS EMERGÊNCIA! Posição: ${myLocation[0].toFixed(5)}, ${myLocation[1].toFixed(5)}`;
-            sendMessage();
-            addSystemLog("🚨 SOS DE EMERGÊNCIA DISPARADO!");
-        }
-
-        function appendChatMessage(msg) {
-            const chatBox = document.getElementById('chat-box');
-            const msgEl = document.createElement('div');
-            const isSOS = msg.text.includes("SOS");
-
-            msgEl.className = `p-2.5 rounded-lg border text-xs space-y-1 ${
-                msg.isMe ? 'bg-emerald-950/30 border-emerald-800/50 ml-6' : 
-                (isSOS ? 'bg-red-950/40 border-red-800/60 mr-6 animate-pulse' : 'bg-cyber-card border-cyber-border mr-6')
-            }`;
-
-            msgEl.innerHTML = `
-                <div class="flex justify-between items-center text-[10px] text-cyber-muted">
-                    <span class="font-bold ${msg.isMe ? 'text-emerald-400' : 'text-cyan-400'}">${msg.sender} ➔ ${msg.target}</span>
-                    <span>${msg.time}</span>
-                </div>
-                <div class="text-gray-200 text-xs font-medium">${msg.text}</div>
-                <div class="pt-1 flex flex-wrap gap-2 text-[9px] font-mono text-gray-400 border-t border-gray-800/60">
-                    <span><i class="fa-solid fa-wifi text-emerald-400"></i> ${msg.rssi}</span>
-                    <span><i class="fa-solid fa-chart-line text-cyan-400"></i> SNR: ${msg.snr}</span>
-                    <span><i class="fa-solid fa-route text-amber-400"></i> Hops: ${msg.hops}</span>
-                </div>
-            `;
-
-            chatBox.appendChild(msgEl);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        // --- NAVIGATION TABS ---
-        function switchTab(tab) {
-            const radioTab = document.getElementById('tab-content-radio');
-            const contactsTab = document.getElementById('tab-content-contacts');
-            const chatTab = document.getElementById('tab-content-chat');
-
-            const btnRadio = document.getElementById('tab-btn-radio');
-            const btnContacts = document.getElementById('tab-btn-contacts');
-            const btnChat = document.getElementById('tab-btn-chat');
-
-            radioTab.classList.add('hidden');
-            contactsTab.classList.add('hidden');
-            chatTab.classList.add('hidden');
-
-            btnRadio.className = "flex-1 py-2.5 text-gray-400 border-b-2 border-transparent hover:text-gray-200 flex items-center justify-center gap-2";
-            btnContacts.className = "flex-1 py-2.5 text-gray-400 border-b-2 border-transparent hover:text-gray-200 flex items-center justify-center gap-2";
-            btnChat.className = "flex-1 py-2.5 text-gray-400 border-b-2 border-transparent hover:text-gray-200 flex items-center justify-center gap-2";
-
-            if (tab === 'radio') {
-                radioTab.classList.remove('hidden');
-                btnRadio.className = "flex-1 py-2.5 text-emerald-400 border-b-2 border-emerald-500 flex items-center justify-center gap-2 bg-cyber-card/40 font-bold";
-            } else if (tab === 'contacts') {
-                contactsTab.classList.remove('hidden');
-                btnContacts.className = "flex-1 py-2.5 text-emerald-400 border-b-2 border-emerald-500 flex items-center justify-center gap-2 bg-cyber-card/40 font-bold";
-            } else if (tab === 'chat') {
-                chatTab.classList.remove('hidden');
-                btnChat.className = "flex-1 py-2.5 text-emerald-400 border-b-2 border-emerald-500 flex items-center justify-center gap-2 bg-cyber-card/40 font-bold";
-            }
-        }
-
-        // --- GEOLOCATION ---
-        function initGeolocation() {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        myLocation = [pos.coords.latitude, pos.coords.longitude];
-                        map.setView(myLocation, 13);
-                        renderMyMarker();
-                        updateHUDCoords(myLocation[0], myLocation[1]);
-                        drawMeshLinks();
-                        addSystemLog(`GPS Sinal travado: ${myLocation[0].toFixed(4)}, ${myLocation[1].toFixed(4)}`);
-                    },
-                    () => {
-                        updateHUDCoords(myLocation[0], myLocation[1]);
-                    }
-                );
-            }
-        }
-
-        function updateHUDCoords(lat, lng) {
-            document.getElementById('hud-coords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        }
-
-        // --- UTILS & LOGS ---
-        function addSystemLog(logText) {
-            const output = document.getElementById('log-output');
-            const logLine = document.createElement('div');
-            logLine.innerHTML = `<span class="text-gray-500">[${getCurrentTime()}]</span> <span class="text-emerald-300">&gt;</span> ${logText}`;
-            output.appendChild(logLine);
-            output.scrollTop = output.scrollHeight;
-        }
-
-        function clearLogs() {
-            document.getElementById('log-output').innerHTML = '';
-        }
-
-        function toggleLogsModal() {
-            document.getElementById('terminal-panel').classList.toggle('hidden');
-        }
-
-        function toggleCoverageCircles() {
-            const show = document.getElementById('chk-coverage').checked;
-            Object.values(coverageCircles).forEach(c => show ? map.addLayer(c) : map.removeLayer(c));
-        }
-
-        function toggleMeshLinks() {
-            drawMeshLinks();
-        }
-
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        function getCurrentTime() {
-            return new Date().toTimeString().split(' ')[0];
-        }
-    </script>
+<body>
+<header class="top"><div class="logo">⛺ Shelter<small>Rede de sobrevivência</small></div><div class="stats" id="stats"></div><button class="ib" id="setB" aria-label="Configurações">⚙</button></header>
+<div class="alert" id="alert" hidden></div>
+<div id="app">
+ <section class="pane on" id="pl">
+  <div class="ph"><b>Conversas</b><button class="sb p" id="newG">＋ Grupo</button><button class="sb" id="joinG">Código</button></div>
+  <div class="body" id="rows"></div>
+ </section>
+ <section class="pane" id="pc">
+  <div class="empty" id="pcE">Escolha uma conversa ou crie um grupo.</div>
+  <div class="cc" id="pcC" hidden>
+   <div class="ph"><button class="ib bk" id="back" aria-label="Voltar">←</button><div id="cAv"></div><div class="who"><b id="cN"></b><small id="cS"></small></div><button class="sb" id="infoB">Info</button></div>
+   <div class="msgs" id="msgs"></div>
+   <div class="att" id="att" hidden><button class="sb" data-a="loc">📍 Localização</button><button class="sb" data-a="pt">🚩 Ponto de encontro</button><button class="sb" data-a="ok">✔ Estou bem</button><button class="sb" data-a="help">✋ Preciso de ajuda</button><button class="sb" data-a="sos" style="color:var(--er)">❗ SOS</button></div>
+   <div class="bar"><button class="sb" id="attB" aria-label="Anexar">＋</button><input type="text" id="inp" placeholder="Mensagem" maxlength="300"><button class="sb mic" id="mic" aria-label="Segure para falar">🎙</button><button class="send" id="snd" aria-label="Enviar">➤</button></div>
+  </div>
+ </section>
+ <section class="pane" id="pm">
+  <div class="ph"><b>Mapa da rede</b><button class="sb" id="zi" aria-label="Aproximar">+</button><button class="sb" id="zo" aria-label="Afastar">−</button><button class="sb" id="gps">GPS</button><button class="sb p" id="osm">Ruas</button></div>
+  <div class="mapw" id="mapw"><div class="lg" id="lg"></div></div>
+  <div class="nl" id="nl"></div>
+ </section>
+</div>
+<nav id="nav"><button data-p="pl" class="on">Conversas</button><button data-p="pc">Chat</button><button data-p="pm">Mapa</button></nav>
+<div class="modal" id="mod" hidden><div class="mbox" id="mbox"></div></div>
+<script src="leaflet/leaflet.js" onerror="var x=document.createElement('script');x.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';document.head.appendChild(x)"></script>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var AL='ABCDEFGHJKMNPQRSTUVWXYZ23456789',HX='0123456789abcdef';
+function rnd(n,al){var s='';for(var i=0;i<n;i++)s+=al[Math.floor(Math.random()*al.length)];return s}
+function rr(a){return(Math.random()*2-1)*a}
+var K=111320,me={lat:-3.1190,lon:-60.0217,code:'!'+rnd(8,HX)},cosL=Math.cos(me.lat*Math.PI/180),range=3500,sfv='SF9';
+var nid=0,gid=0;
+function mkNode(name,n,e,code){return{id:'n'+(++nid),name:name,code:code||'!'+rnd(8,HX),lat:me.lat+n/K,lon:me.lon+e/(K*cosL),vx:rr(3),vy:rr(3),st:'ok',seen:Date.now()}}
+var nodes=[['Mãe',900,1200],['Pai',-2600,1800],['Vovó',-5200,2600],['Davi',1500,-6800],['Tio Luís',7800,5400]].map(function(a){return mkNode(a[0],a[1],a[2])});
+var groups=[{id:'g'+(++gid),name:'Família',code:rnd(6,AL),members:nodes.map(function(n){return n.id})}];
+var msgs=[],sup={},cur=null,mg=null,sel=null;
+try{var sv=JSON.parse(localStorage.getItem('abrigo')||'null');if(sv){msgs=sv.m||[];sup=sv.s||{};if(sv.g){groups=sv.g;gid=sv.gi}if(sv.n){nodes=sv.n.map(function(o){o.vx=rr(3);o.vy=rr(3);o.st='ok';o.seen=Date.now();return o});nid=sv.ni}if(sv.c)me.code=sv.c}}catch(e){}
+function save(){if(real)return;try{localStorage.setItem('abrigo',JSON.stringify({m:msgs.slice(-300).map(function(m){var o={};for(var k in m)if(k!=='u')o[k]=m[k];return o}),s:sup,g:groups,gi:gid,ni:nid,c:me.code,n:nodes.map(function(n){return{id:n.id,name:n.name,code:n.code,lat:n.lat,lon:n.lon}})}))}catch(e){}}
+function sys(c,x){msgs.push({c:c,f:'Sistema',x:x,sys:1,t:Date.now(),rd:1})}
+if(!msgs.length){var n0=Date.now();msgs=[{c:'dn1',f:'Mãe',x:'Chegou bem?',t:n0-3600000},{c:'g1',f:'Pai',x:'Se a casa não for segura, nos encontramos na ponte velha.',t:n0-1800000},{c:'dn4',f:'Davi',x:'Estou com água e lanterna.',t:n0-900000}];sys('g1','Grupo criado. Código de convite: '+groups[0].code)}
+function nodeBy(i){return nodes.filter(function(n){return n.id===i})[0]}
+function dist(a,b){if(a.lat==null||b.lat==null)return Infinity;return Math.hypot((a.lat-b.lat)*K,(a.lon-b.lon)*K*cosL)}
+function route(to){if(!to)return -1;if(real)return to.num&&Date.now()-to.seen<900000?(to.hops||0)+1:-1;var all=[me].concat(nodes),seen={},q=[[me,0]];seen.me=1;
+ while(q.length){var c=q.shift();if(c[0]===to)return c[1];all.forEach(function(n){var k=n===me?'me':n.id;if(!seen[k]&&dist(c[0],n)<=range){seen[k]=1;q.push([n,c[1]+1])}})}return -1}
+function rssi(d){return Math.round(-50-25*Math.log10(Math.max(d,100)/100))}
+function hhmm(t){return new Date(t).toTimeString().slice(0,5)}
+function ago(t){var s=Math.round((Date.now()-t)/1000);return s<60?'agora':s<3600?Math.round(s/60)+' min':Math.round(s/3600)+' h'}
+function chats(){return groups.map(function(g){return{id:g.id,name:g.name,g:g}}).concat(nodes.map(function(n){return{id:'d'+n.id,name:n.name,n:n}})).concat([{id:'me',name:'Você (lista)'}])}
+function chOf(id){return chats().filter(function(c){return c.id===id})[0]}
+function last(id){for(var i=msgs.length-1;i>=0;i--)if(msgs[i].c===id)return msgs[i]}
+function unread(id){return msgs.filter(function(m){return m.c===id&&!m.rd&&m.f!=='Eu'}).length}
+function av(c){var h=0;for(var i=0;i<c.name.length;i++)h+=c.name.charCodeAt(i);return '<div class="av" style="background:'+(c.g?'#4a5a2a':c.id==='me'?'#5d5d4a':'hsl('+(h*37%360)+',35%,32%)')+'">'+(c.g?'👥':c.id==='me'?'📝':esc(c.name[0]))+'</div>'}
+function tk(m){return m.s==='q'?'🕓':m.s==='ok'?'✓✓':m.s==='err'?'⚠':''}
+function pane(p){['pl','pc','pm'].forEach(function(s){$(s).classList.toggle('on',s===p)});[].forEach.call($('nav').children,function(b){b.classList.toggle('on',b.dataset.p===p)});if(p==='pm')resize()}
+$('nav').onclick=function(e){if(e.target.dataset.p)pane(e.target.dataset.p)};
+function drawList(){var rows=chats().map(function(c){return{c:c,l:last(c.id)}}).sort(function(a,b){return(b.l?b.l.t:0)-(a.l?a.l.t:0)});
+ $('rows').innerHTML=rows.map(function(r){var u=unread(r.c.id),l=r.l,p=l?(l.loc?'📍 Localização':l.a?'🎙 Áudio '+l.a+' s':l.x||''):'Sem mensagens';
+  return '<div class="row'+(cur===r.c.id?' sel':'')+'" tabindex="0" data-c="'+r.c.id+'">'+av(r.c)+'<div class="mid"><div class="t"><b>'+esc(r.c.name)+'</b><small>'+(l?hhmm(l.t):'')+'</small></div><div class="t"><span class="pv">'+(l&&l.f==='Eu'?tk(l)+' ':'')+esc(p)+'</span>'+(u?'<i class="bd">'+u+'</i>':'')+'</div></div></div>'}).join('')}
+function setSub(){var c=chOf(cur);if(!c)return;$('cS').textContent=c.g?c.g.members.map(function(i){var n=nodeBy(i);return n?n.name:'?'}).join(', ')||'Sem membros':c.id==='me'?'Só você':(route(c.n)>=0?'● online · '+route(c.n)+' salto(s)':'sem sinal · visto há '+ago(c.n.seen))}
+function supCard(){var S=['Água (3 L por pessoa por dia)','Comida para 7 dias','Lanterna e pilhas','Remédios e receitas','Primeiros socorros','Documentos em saco plástico','Power bank carregado','Rádio a pilha'];
+ return '<div class="b"><b>Suprimentos da casa</b>'+S.map(function(s,i){return '<label class="chip"><input type="checkbox" data-i="'+i+'"'+(sup[i]?' checked':'')+'><span>'+esc(s)+'</span></label>'}).join('')+'</div>'}
+function drawConv(){var c=chOf(cur);if(!c)return;var el=$('msgs'),bot=el.scrollHeight-el.scrollTop-el.clientHeight<40;
+ $('pcE').hidden=true;$('pcC').hidden=false;$('cAv').innerHTML=av(c);$('cN').textContent=c.name;setSub();$('infoB').hidden=c.id==='me';
+ var h=cur==='me'?supCard():'';
+ msgs.forEach(function(m,k){if(m.c!==cur)return;m.rd=1;if(m.sys){h+='<div class="sys">'+esc(m.x)+'</div>';return}var mine=m.f==='Eu';
+  h+='<div class="b '+(mine?'o':'')+'">'+(!mine&&c.g?'<small class="sn">'+esc(m.f)+'</small>':'')+(m.loc?'<div class="lc" data-k="'+k+'"><span>'+(m.loc.pt?'🚩':'📍')+'</span><div><b>'+(m.loc.pt?'Ponto de encontro':'Localização')+'</b><small>'+m.loc.lat.toFixed(4)+', '+m.loc.lon.toFixed(4)+'</small></div></div>':'')+(m.a?'<div class="vb"><button data-v="'+k+'" aria-label="Reproduzir">▶</button><span>0:'+('0'+m.a).slice(-2)+(m.u||m.sim?'':' (indisponível)')+'</span></div>':'')+(m.x?'<div>'+esc(m.x)+'</div>':'')+'<small class="mt">'+hhmm(m.t)+(mine?' '+tk(m):'')+'</small></div>'});
+ var top=el.scrollTop;el.innerHTML=h;el.scrollTop=bot?el.scrollHeight:top}
+function upStats(){var o=nodes.filter(function(n){return route(n)>=0}).length,q=msgs.filter(function(m){return m.f==='Eu'&&m.s==='q'}).length;
+ $('stats').innerHTML='<span>● '+o+'/'+nodes.length+' nós</span><span>Alcance '+(range/1000).toFixed(1).replace('.',',')+' km</span><span>Fila '+q+'</span><span>'+(real?'Rádio · '+rst:'Simulado')+'</span>';
+ var s=nodes.filter(function(n){return n.st==='sos'})[0];$('alert').hidden=!s;if(s){$('alert').textContent='⚠ SOS de '+s.name+' · toque para ver no mapa';$('alert').dataset.n=s.id}
+ $('nl').innerHTML=nodes.map(function(n){var h=route(n),d=Math.round(dist(me,n));return '<div class="nr" data-n="'+n.id+'"><i style="background:'+(n.st==='sos'?'var(--er)':h>=0?'var(--am)':'var(--mu)')+'"></i><span><b>'+esc(n.name)+'</b> <small>'+n.code+'</small></span><small>'+(h>=0?(isFinite(d)?d+' m · ':'')+h+' salto'+(h>1?'s':'')+' · '+sig(n,d):'sem sinal · '+ago(n.seen))+'</small></div>'}).join('')}
+function refresh(){drawList();if(cur)drawConv();upStats()}
+function open(id){cur=id;$('att').hidden=true;$('mic').style.visibility='visible';$('attB').style.visibility=id==='me'?'hidden':'visible';drawConv();drawList();pane('pc');$('msgs').scrollTop=$('msgs').scrollHeight}
+function hopsFor(c){if(c[0]==='g'){var g=groups.filter(function(x){return x.id===c})[0];return g&&g.members.length?Math.max.apply(null,g.members.map(function(i){return route(nodeBy(i))})):0}return c[0]==='d'?route(nodeBy(c.slice(1))):0}
+function deliver(){if(real)return false;var ch=false;msgs.forEach(function(m){if(m.f==='Eu'&&m.s==='q'&&hopsFor(m.c)>=0){m.s='ok';ch=true}});return ch}
+function post(x,loc){var m={c:cur,f:'Eu',x:x,loc:loc||null,t:Date.now(),s:cur==='me'?'':'q',rd:1};msgs.push(m);
+ if(real&&cur!=='me'){var c=chOf(cur),to=c.g?BC:c.n.num,ch=c.g?(c.g.ch||0):0,w=loc?(loc.pt?'🚩 ':'📍 ')+loc.lat.toFixed(5)+','+loc.lon.toFixed(5)+(x?' '+x:''):x;
+  while(te.encode(w).length>200)w=w.slice(0,-1);m.pid=rid();
+  var pk=pF(2,to).concat(ch?pV(3,ch):[],pB(4,pV(1,1).concat(pB(2,te.encode(w)))),pF(6,m.pid),pV(9,3),pV(10,1));
+  try{sendRaw(pB(1,pk)).catch(function(){m.s='err';refresh()})}catch(e){m.s='err'}}
+ deliver();save();refresh();var e=$('msgs');e.scrollTop=e.scrollHeight}
+$('snd').onclick=function(){var v=$('inp').value.trim();if(!v)return;$('inp').value='';post(v)};
+$('inp').onkeydown=function(e){if(e.key==='Enter')$('snd').click()};
+$('attB').onclick=function(){$('att').hidden=!$('att').hidden};
+var AT={ok:'Estou bem.',help:'Preciso de ajuda, pode me ligar?',sos:'SOS! Preciso de ajuda agora.'};
+$('att').onclick=function(e){var a=e.target.dataset.a;if(!a)return;$('att').hidden=true;
+ if(a==='loc')post('',{lat:me.lat,lon:me.lon});else if(a==='pt')post('Ponto de encontro marcado.',{lat:me.lat,lon:me.lon,pt:1});else post(AT[a],a==='ok'?null:{lat:me.lat,lon:me.lon})};
+$('rows').onclick=function(e){var r=e.target.closest('.row');if(r)open(r.dataset.c)};
+$('rows').onkeydown=function(e){if(e.key==='Enter'){var r=e.target.closest('.row');if(r)open(r.dataset.c)}};
+$('back').onclick=function(){pane('pl')};
+$('msgs').onclick=function(e){var t=e.target;if(t.dataset.v!==undefined){play(+t.dataset.v);return}
+ if(t.dataset.i!==undefined){sup[t.dataset.i]=t.checked;save();return}
+ var l=t.closest('.lc');if(l){var m=msgs[+l.dataset.k];focus(m.loc.lat,m.loc.lon)}};
+$('infoB').onclick=function(){var c=chOf(cur);if(c.g)showInfo(c.g);else if(c.n){sel=c.n.id;focus(c.n.lat,c.n.lon)}};
+$('alert').onclick=function(){var n=nodeBy($('alert').dataset.n);if(n)focus(n.lat,n.lon)};
+$('nl').onclick=function(e){var r=e.target.closest('.nr');if(r){var n=nodeBy(r.dataset.n);sel=n.id;focus(n.lat,n.lon)}};
+// mapa (Leaflet)
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+var map=null,nm={},links=null,flags=null,rangeC=null,meM=null,osm=null;
+function resize(){if(map)map.invalidateSize()}
+if(window.L){
+ map=L.map('mapw',{zoomControl:false,attributionControl:true,minZoom:5,maxZoom:19}).setView([me.lat,me.lon],14);map.attributionControl.setPrefix('Leaflet');
+ var Grid=L.GridLayer.extend({createTile:function(){var t=document.createElement('canvas'),s=this.getTileSize(),x=t.getContext('2d');t.width=s.x;t.height=s.y;x.fillStyle=css('--bg');x.fillRect(0,0,s.x,s.y);x.strokeStyle=css('--ln');x.lineWidth=1;x.strokeRect(.5,.5,s.x-1,s.y-1);x.globalAlpha=.45;x.beginPath();x.moveTo(s.x/2,0);x.lineTo(s.x/2,s.y);x.moveTo(0,s.y/2);x.lineTo(s.x,s.y/2);x.stroke();return t}});
+ new Grid({maxZoom:19}).addTo(map);
+ osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+ osm.on('tileerror',function(){$('lg').textContent='Ruas indisponíveis aqui; usando a grade offline.'});
+ links=L.layerGroup().addTo(map);flags=L.layerGroup().addTo(map);
+ rangeC=L.circle([me.lat,me.lon],{radius:range,color:css('--gr'),weight:2,dashArray:'6 5',fill:false,interactive:false}).addTo(map);
+ meM=L.marker([me.lat,me.lon],{icon:L.divIcon({className:'nd me',html:'<i></i><span>VOCÊ</span>',iconSize:[0,0]}),keyboard:false}).addTo(map).bindPopup('<b>Você</b><br>Nó '+me.code);
+ map.on('zoomend',function(){$('lg').textContent='Leaflet · zoom '+map.getZoom()+' · '+Math.round(156543*Math.cos(me.lat*Math.PI/180)/Math.pow(2,map.getZoom()))+' m/px'});map.fire('zoomend');
+ try{new ResizeObserver(resize).observe($('mapw'))}catch(e){}
+}else $('lg').textContent='Leaflet não carregou. Verifique a conexão.';
+function draw(){if(!map)return;var gr=css('--gr');
+ rangeC.setLatLng([me.lat,me.lon]).setRadius(range).setStyle({color:gr});meM.setLatLng([me.lat,me.lon]);links.clearLayers();
+ nodes.forEach(function(n){if(n.lat==null){if(nm[n.id]){map.removeLayer(nm[n.id]);delete nm[n.id]}return}var h=route(n),d=Math.round(dist(me,n)),cl=n.st==='sos'?' sos':h>=0?' on':'',k=cl+(n.id===sel?' s':'')+n.name+(h>=0?d:'?'),mk=nm[n.id];
+  if(d<=range)L.polyline([[me.lat,me.lon],[n.lat,n.lon]],{color:gr,weight:2,interactive:false}).addTo(links);
+  if(!mk){mk=nm[n.id]=L.marker([n.lat,n.lon],{keyboard:false,icon:L.divIcon({className:'nd',iconSize:[0,0]})}).addTo(map).bindPopup('');mk.on('click',function(){sel=n.id;draw()})}
+  mk.setLatLng([n.lat,n.lon]);mk.setPopupContent('<b>'+esc(n.name)+'</b><br>'+(h>=0?(isFinite(d)?d+' m · ':'')+h+' salto'+(h>1?'s':'')+' · '+sig(n,d):'sem sinal · visto há '+ago(n.seen))+'<br><small>'+n.code+' · '+(n.st==='sos'?'SOS':n.st==='help'?'Precisa de ajuda':'Bem')+'</small>');
+  if(mk._k!==k){mk._k=k;mk.setIcon(L.divIcon({className:'nd'+cl+(n.id===sel?' s':''),html:'<i></i><span>'+esc(n.name)+(h>=0?' '+d+' m':' ?')+'</span>',iconSize:[0,0]}))}});
+ flags.clearLayers();msgs.forEach(function(m){if(m.loc&&m.loc.pt)L.marker([m.loc.lat,m.loc.lon],{interactive:false,keyboard:false,icon:L.divIcon({className:'nd fl',html:'<b>🚩</b>',iconSize:[0,0]})}).addTo(flags)})}
+function focus(la,lo){pane('pm');if(map){map.invalidateSize();map.setView([la,lo],Math.max(map.getZoom(),15))}}
+$('zi').onclick=function(){if(map)map.zoomIn()};$('zo').onclick=function(){if(map)map.zoomOut()};
+$('gps').onclick=function(){if(!navigator.geolocation)return;
+ navigator.geolocation.getCurrentPosition(function(p){var dl=p.coords.latitude-me.lat,dn=p.coords.longitude-me.lon;me.lat+=dl;me.lon+=dn;if(!real){nodes.forEach(function(n){n.lat+=dl;n.lon+=dn});msgs.forEach(function(m){if(m.loc){m.loc.lat+=dl;m.loc.lon+=dn}})}cosL=Math.cos(me.lat*Math.PI/180);save();if(map)map.setView([me.lat,me.lon]);draw()},function(){},{enableHighAccuracy:true,timeout:10000})};
+$('osm').onclick=function(){if(!map)return;
+ 
+ if(map.hasLayer(osm)){map.removeLayer(osm);this.classList.remove('p')}else{osm.addTo(map);this.classList.add('p');$('lg').textContent='Ruas © OpenStreetMap'}};
+window.addEventListener('resize',resize);
+// voz (segure o 🎙 para falar com a conversa ou o grupo aberto)
+var AC=null,rec=null,chunks=[],t0=0,stream=null,held=false;
+function beep(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();[0,.18,.36].forEach(function(d,i){var o=AC.createOscillator(),g=AC.createGain();o.frequency.value=440+i*110;g.gain.value=.08;o.connect(g);g.connect(AC.destination);o.start(AC.currentTime+d);o.stop(AC.currentTime+d+.14)})}catch(e){}}
+function play(k){var m=msgs[k];if(!m)return;if(m.sim){beep();return}if(m.u){new Audio(m.u).play().catch(function(){})}}
+function startRec(){if(rec)return;if(!navigator.mediaDevices||!window.MediaRecorder){$('cS').textContent='Microfone indisponível neste navegador.';return}
+ navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){if(!held){s.getTracks().forEach(function(t){t.stop()});return}stream=s;chunks=[];rec=new MediaRecorder(s);rec.ondataavailable=function(e){chunks.push(e.data)};rec.start();t0=Date.now()}).catch(function(){$('cS').textContent='Permita o uso do microfone para gravar.'})}
+function stopRec(){if(!rec)return;var r=rec;rec=null;r.onstop=function(){stream.getTracks().forEach(function(t){t.stop()});var d=Math.max(1,Math.min(60,Math.round((Date.now()-t0)/1000)));msgs.push({c:cur,f:'Eu',x:'',a:d,u:URL.createObjectURL(new Blob(chunks,{type:r.mimeType||'audio/webm'})),t:Date.now(),s:cur==='me'?'':'q',rd:1});deliver();save();refresh();var e=$('msgs');e.scrollTop=e.scrollHeight};try{r.stop()}catch(e){}}
+var mic=$('mic');
+mic.onpointerdown=function(e){e.preventDefault();try{mic.setPointerCapture(e.pointerId)}catch(x){}held=true;mic.classList.add('rec');$('cS').textContent='● transmitindo…';startRec()};
+function up(){if(!held)return;held=false;mic.classList.remove('rec');stopRec();setSub()}
+mic.onpointerup=up;mic.onpointercancel=up;mic.oncontextmenu=function(e){e.preventDefault()};
+// modais, grupos e membros
+function modal(h){$('mbox').innerHTML=h;$('mod').hidden=false}
+function closeM(){$('mod').hidden=true}
+function newGroup(name,ids){var g={id:'g'+(++gid),name:name,code:rnd(6,AL),members:ids};groups.push(g);sys(g.id,'Grupo criado. Código de convite: '+g.code);save();return g}
+$('newG').onclick=function(){modal('<h2>Novo grupo</h2><label class="f">Nome do grupo<input type="text" id="gn" maxlength="24" placeholder="Ex.: Equipe da ponte"></label><b>Membros</b>'+(nodes.map(function(n){return '<label class="chip"><input type="checkbox" data-n="'+n.id+'" checked><span>'+esc(n.name)+'</span><small class="mono">'+n.code+'</small></label>'}).join('')||'<p class="mu">Nenhum contato ainda. Crie o grupo e adicione membros por código.</p>')+'<div class="acts"><button class="btn" data-x>Cancelar</button><button class="btn p" data-act="gok">Criar grupo</button></div>')};
+$('joinG').onclick=function(){modal('<h2>Entrar com código</h2><p class="mu">Digite o código de convite do grupo que alguém da rede passou para você.</p><label class="f">Código<input type="text" id="jc" maxlength="8" placeholder="EX.: K7M2QX" autocomplete="off"></label><p class="mu" id="jm"></p><div class="acts"><button class="btn" data-x>Cancelar</button><button class="btn p" data-act="jok">Entrar</button></div>')};
+function showInfo(g){mg=g;var out=nodes.filter(function(n){return g.members.indexOf(n.id)<0});
+ modal('<h2>'+esc(g.name)+'</h2><p class="mu">Código de convite (passe para quem vai entrar)</p><div class="code mono">'+g.code+'</div><div class="acts"><button class="btn" data-act="copy">Copiar código</button></div><b>Membros ('+g.members.length+')</b>'+(g.members.filter(function(i){return nodeBy(i)}).map(function(i){var n=nodeBy(i);return '<div class="chip"><span>'+esc(n.name)+' <small class="mono">'+n.code+'</small></span><button class="sb" data-act="rm" data-n="'+n.id+'">Remover</button></div>'}).join('')||'<p class="mu">Nenhum membro.</p>')+(out.length?'<b>Adicionar contato</b>'+out.map(function(n){return '<div class="chip"><span>'+esc(n.name)+'</span><button class="sb p" data-act="add" data-n="'+n.id+'">Adicionar</button></div>'}).join(''):'')+'<b>Adicionar novo membro por código do nó</b><div class="grid"><label class="f">Nome<input type="text" id="nnN" maxlength="14"></label><label class="f">Código do nó<input type="text" id="nnC" maxlength="10" placeholder="!a1b2c3d4"></label></div><div class="acts"><button class="btn p" data-act="nn">Adicionar membro</button><button class="btn" data-x>Fechar</button></div>')}
+$('mod').onclick=function(e){var t=e.target;if(t.id==='mod'||t.dataset.x!==undefined){closeM();return}var a=t.dataset.act;if(!a)return;
+ if(a==='gok'){var ids=[].map.call(document.querySelectorAll('#mbox [data-n]:checked'),function(x){return x.dataset.n}),g=newGroup($('gn').value.trim()||'Grupo '+(gid+1),ids);closeM();refresh();open(g.id)}
+ else if(a==='jok'){var c=$('jc').value.toUpperCase().replace(/[^A-Z0-9]/g,'');if(c.length<4){$('jm').textContent='O código tem pelo menos 4 caracteres.';return}
+  var g2=groups.filter(function(x){return x.code===c})[0];
+  if(!g2){var pick=nodes.filter(function(){return Math.random()<.5}).map(function(n){return n.id});g2={id:'g'+(++gid),name:'Grupo '+c,code:c,members:pick};groups.push(g2);sys(g2.id,'Você entrou pelo código '+c+'. Os membros aparecem conforme a rede os encontra.');save()}
+  closeM();refresh();open(g2.id)}
+ else if(a==='copy'){try{navigator.clipboard.writeText(mg.code)}catch(x){}t.textContent='Copiado'}
+ else if(a==='add'){mg.members.push(t.dataset.n);sys(mg.id,nodeBy(t.dataset.n).name+' entrou no grupo.');save();refresh();showInfo(mg)}
+ else if(a==='rm'){mg.members=mg.members.filter(function(i){return i!==t.dataset.n});sys(mg.id,nodeBy(t.dataset.n).name+' saiu do grupo.');save();refresh();showInfo(mg)}
+ else if(a==='nn'){var nm=$('nnN').value.trim();if(!nm)return;var n=mkNode(nm,rr(4000),rr(4000),$('nnC').value.trim()||undefined);nodes.push(n);mg.members.push(n.id);sys(mg.id,nm+' foi adicionado ao grupo.');save();refresh();showInfo(mg)}};
+function showSet(){modal('<h2>Configurações do rádio</h2><div class="grid"><label class="f">Frequência<select id="fq"><option>915 MHz</option><option>433 MHz</option><option>868 MHz</option></select></label><label class="f">Fator SF<select id="sf">'+[7,8,9,10,11,12].map(function(s){return '<option>SF'+s+'</option>'}).join('')+'</select></label><label class="f">Banda<select id="bw"><option>125 kHz</option><option>250 kHz</option><option>500 kHz</option></select></label></div><p class="mu" id="rng"></p><p>Código do seu nó: <b class="mono">'+me.code+'</b></p><b>Conectar rádio</b><p class="mu">Conecte um rádio com firmware Meshtastic por USB ou Bluetooth. Ao conectar, nós, mensagens e posições passam a vir da rede LoRa real e a simulação é desligada. Enquanto o rádio estiver conectado, nada é salvo no navegador.</p><div class="acts"><button class="btn p" id="ble">Bluetooth</button><button class="btn" id="usb">USB</button></div><p class="mu" id="hw"></p><div class="acts"><button class="btn" data-x>Fechar</button></div>');
+ $('sf').value=sfv;$('sf').onchange=function(){sfv=$('sf').value;upRange()};upRange();
+ function hw(t){$('hw').textContent=t}
+ function go2(fn){hw('Conectando…');fn().then(function(){hw('Conectado. Sincronizando nós e mensagens…')}).catch(function(e){hw('Não foi possível conectar: '+(e&&e.message||e))})}
+ $('ble').onclick=function(){go2(connectBle)};$('usb').onclick=function(){go2(connectUsb)}}
+function upRange(){range=Math.round(1200*Math.pow(1.4,+sfv.slice(2)-7));if($('rng'))$('rng').textContent='Alcance estimado em campo aberto: '+(range/1000).toFixed(1).replace('.',',')+' km. SF maior alcança mais longe e envia mais devagar.';upStats();draw()}
+$('setB').onclick=showSet;
+// rádio LoRa real (Meshtastic por USB serial ou Bluetooth)
+var real=false,myNum=0,BC=4294967295,rst='',radio={},te=new TextEncoder(),td=new TextDecoder();
+function vint(n){var b=[];while(n>127){b.push((n%128)|128);n=Math.floor(n/128)}b.push(n);return b}
+function tg(f,w){return vint(f*8+w)}
+function pV(f,v){return tg(f,0).concat(vint(v))}
+function pB(f,a){a=Array.prototype.slice.call(a);return tg(f,2).concat(vint(a.length),a)}
+function pF(f,v){return tg(f,5).concat([v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255])}
+function rv(u,st){var v=0,m=1,b,i=st;do{b=u[i++];v+=(b&127)*m;m*=128}while((b&128)&&i<u.length);return[v,i]}
+function pd(u){var o=[],i=0;while(i<u.length){var r=rv(u,i),f=Math.floor(r[0]/8),w=r[0]%8,v;i=r[1];
+ if(w===0){r=rv(u,i);v=r[0];i=r[1]}
+ else if(w===2){r=rv(u,i);v=u.subarray(r[1],r[1]+r[0]);i=r[1]+r[0]}
+ else if(w===5){v=(u[i]|u[i+1]<<8|u[i+2]<<16|u[i+3]<<24)>>>0;i+=4}
+ else if(w===1){v=0;i+=8}else break;
+ o.push({f:f,v:v})}return o}
+function gt(a,f){for(var i=0;i<a.length;i++)if(a[i].f===f)return a[i].v}
+function fl(x){var d=new DataView(new ArrayBuffer(4));d.setUint32(0,x);return d.getFloat32(0)}
+function hx(n){return '!'+n.toString(16).padStart(8,'0')}
+function rid(){return Math.floor(Math.random()*4294967294)+1}
+function sig(n,d){return real&&n.snr!=null?n.snr.toFixed(1)+' dB SNR':isFinite(d)?rssi(d)+' dBm':'—'}
+function setSt(t){rst=t;var h=$('hw');if(h)h.textContent=t;upStats()}
+function nodeByNum(num){return nodes.filter(function(n){return n.num===num})[0]}
+function upNode(num,o){var n=nodeByNum(num);if(!n){n={id:'n'+num,num:num,name:hx(num),code:hx(num),lat:null,lon:null,st:'ok',seen:0};nodes.push(n);if(groups[0])groups[0].members.push(n.id)}
+ for(var k in o)if(o[k]!=null)n[k]=o[k];return n}
+function setPos(o,pp){var la=gt(pp,1),lo=gt(pp,2);if(la!=null&&lo!=null&&((la|0)||(lo|0))){o.lat=(la|0)/1e7;o.lon=(lo|0)/1e7}}
+function onFrom(u){var m=pd(u),pk=gt(m,2),mi=gt(m,3),ni=gt(m,4),cc=gt(m,7);
+ if(mi){myNum=gt(pd(mi),1)||0;me.code=hx(myNum);setSt('meu nó '+me.code)}
+ if(ni){var a=pd(ni),num=gt(a,1),us=gt(a,2),ps=gt(a,3),lh=gt(a,5),hp=gt(a,9),sn=gt(a,4),o={};
+  if(us){var uu=pd(us);o.name=td.decode(gt(uu,2)||gt(uu,3)||new Uint8Array(0))||null}
+  if(ps)setPos(o,pd(ps));
+  if(lh)o.seen=lh*1000;if(hp!=null)o.hops=hp;if(sn!=null)o.snr=fl(sn);
+  if(num&&num===myNum){if(o.lat!=null){me.lat=o.lat;me.lon=o.lon;cosL=Math.cos(me.lat*Math.PI/180);if(map)map.setView([me.lat,me.lon])}}else if(num)upNode(num,o)}
+ if(pk)onPacket(pd(pk));
+ if(cc!=null)setSt('sincronizado · '+nodes.length+' nós');
+ refresh();draw()}
+function onPacket(a){var fr=gt(a,1),to=gt(a,2),ch=gt(a,3)||0,dc=gt(a,4),sn=gt(a,8),hl=gt(a,9),hs=gt(a,15);if(!dc)return;
+ var d=pd(dc),port=gt(d,1),pl=gt(d,2)||new Uint8Array(0);
+ if(port===5){var rq=gt(d,6),er=gt(pd(pl),3)||0;msgs.forEach(function(m){if(m.pid&&m.pid===rq)m.s=er?'err':'ok'});refresh();return}
+ if(fr===myNum||!fr)return;
+ var o={seen:Date.now()};if(sn!=null)o.snr=fl(sn);if(hs&&hl!=null)o.hops=Math.max(0,hs-hl);
+ var n=upNode(fr,o);
+ if(port===3){var q={};setPos(q,pd(pl));if(q.lat!=null){n.lat=q.lat;n.lon=q.lon}}
+ else if(port===4){var nn=td.decode(gt(pd(pl),2)||new Uint8Array(0));if(nn)n.name=nn}
+ else if(port===1)inText(n,to,ch,td.decode(pl));
+ refresh();draw()}
+function inText(n,to,ch,text){var c;
+ if(to===BC){var g=groups.filter(function(x){return(x.ch||0)===ch})[0];if(!g){g={id:'g'+(++gid),name:'Canal '+ch,code:rnd(6,AL),ch:ch,members:[]};groups.push(g)}if(g.members.indexOf(n.id)<0)g.members.push(n.id);c=g.id}
+ else if(to===myNum)c='d'+n.id;else return;
+ var loc=null,x=text,mm=/^([📍🚩]) (-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\s*(.*)$/u.exec(text);
+ if(mm){loc={lat:+mm[2],lon:+mm[3]};if(mm[1]==='🚩')loc.pt=1;x=mm[4];if(!loc.pt){n.lat=loc.lat;n.lon=loc.lon}}
+ if(/^SOS/i.test(x)){n.st='sos';if(!loc&&n.lat!=null)loc={lat:n.lat,lon:n.lon}}else if(/precis[ao] de ajuda/i.test(x))n.st='help';else if(/^estou bem/i.test(x))n.st='ok';
+ msgs.push({c:c,f:n.name,x:x,loc:loc,t:Date.now(),rd:cur===c?1:0})}
+function sendRaw(b){var u=new Uint8Array(b);
+ if(radio.kind==='usb'){var f=new Uint8Array(4+u.length);f[0]=0x94;f[1]=0xC3;f[2]=u.length>>8;f[3]=u.length&255;f.set(u,4);return radio.wr.write(f)}
+ if(radio.kind==='ble')return radio.to.writeValue(u);
+ return Promise.reject(new Error('sem rádio'))}
+function goReal(){real=true;myNum=0;nodes=[];sel=null;groups.forEach(function(g){g.members=[]});
+ if(map){Object.keys(nm).forEach(function(k){map.removeLayer(nm[k])});nm={};links.clearLayers()}
+ $('mic').hidden=true;setSt('conectado, sincronizando…');refresh();draw()}
+function drop(){real=false;radio={};$('mic').hidden=false;setSt('desconectado');refresh()}
+function connectUsb(){if(!navigator.serial)return Promise.reject(new Error('USB serial indisponível neste navegador (use Chrome ou Edge no computador).'));
+ return navigator.serial.requestPort().then(function(p){return p.open({baudRate:115200}).then(function(){
+  radio={kind:'usb',port:p,wr:p.writable.getWriter()};goReal();
+  var rd=p.readable.getReader(),buf=[];
+  radio.wr.write(new Uint8Array(32).fill(0xC3)).then(function(){return sendRaw(pV(3,rid()))});
+  (function loop(){rd.read().then(function(r){if(r.done){drop();return}
+   for(var i=0;i<r.value.length;i++)buf.push(r.value[i]);
+   while(buf.length>=4){var st=buf.indexOf(0x94);if(st<0){buf=[];break}if(st>0)buf.splice(0,st);if(buf.length<4)break;if(buf[1]!==0xC3){buf.shift();continue}var l=buf[2]*256+buf[3];if(l>512){buf.shift();continue}if(buf.length<4+l)break;onFrom(new Uint8Array(buf.slice(4,4+l)));buf.splice(0,4+l)}
+   loop()}).catch(drop)})()})})}
+function connectBle(){if(!navigator.bluetooth)return Promise.reject(new Error('Bluetooth indisponível. Use o Chrome.'));
+ var S='6ba1b218-15a8-461f-9fa8-5dcae273eafd',dev;
+ return navigator.bluetooth.requestDevice({filters:[{services:[S]}]}).then(function(d){dev=d;d.addEventListener('gattserverdisconnected',drop);return d.gatt.connect()})
+ .then(function(g){return g.getPrimaryService(S)})
+ .then(function(sv){return Promise.all([sv.getCharacteristic('f75c76d2-129e-4dad-a1dd-7866124401e7'),sv.getCharacteristic('2c55e69e-4993-11ed-b878-0242ac120002'),sv.getCharacteristic('ed9da18c-a800-4f66-a670-aa7547e34453')])})
+ .then(function(c){radio={kind:'ble',dev:dev,to:c[0],from:c[1],num:c[2]};goReal();
+  function drain(){return radio.from.readValue().then(function(v){var u=new Uint8Array(v.buffer,v.byteOffset,v.byteLength);if(u.length){onFrom(u);return drain()}})}
+  var busy=false,again=false;function pump(){if(busy){again=true;return}busy=true;drain().catch(function(){}).then(function(){busy=false;if(again){again=false;pump()}})}
+  radio.num.addEventListener('characteristicvaluechanged',pump);
+  return radio.num.startNotifications().then(function(){return sendRaw(pV(3,rid()))}).then(pump)})}
+// simulação da rede
+var talk=['Cheguei em casa.','Estou indo para o ponto de encontro.','Bateria do rádio em 60%.','Temos água e comida para hoje.','Sinal fraco, falo daqui a pouco.','Alguém precisa de algo?'];
+setInterval(function(){if(!real)nodes.forEach(function(n){if(n.lat==null||n.vx==null)return;n.lat+=n.vy/K;n.lon+=n.vx/(K*cosL);if(Math.random()<.1){n.vx=rr(4);n.vy=rr(4)}if(route(n)>=0)n.seen=Date.now()});
+ var ch=deliver();if(ch)save();upStats();draw();if(cur){setSub();if(ch)drawConv()}if(ch)drawList()},2000);
+setInterval(function(){if(real||!nodes.length)return;var n=nodes[Math.floor(Math.random()*nodes.length)];if(route(n)<0)return;
+ var gs=groups.filter(function(g){return g.members.indexOf(n.id)>=0}),c=gs.length&&Math.random()<.5?gs[Math.floor(Math.random()*gs.length)].id:'d'+n.id,
+  r=Math.random(),x,loc=null,v=false;
+ if(r<.04){x=AT.sos;n.st='sos';loc={lat:n.lat,lon:n.lon}}else if(r<.12){x=AT.help;n.st='help';loc={lat:n.lat,lon:n.lon}}
+ else if(n.st!=='ok'&&r<.6){x='Já está tudo bem por aqui.';n.st='ok'}
+ else{x=talk[Math.floor(Math.random()*talk.length)];if(Math.random()<.12)loc={lat:n.lat,lon:n.lon};else v=n.st==='ok'&&Math.random()<.12}
+ msgs.push({c:c,f:n.name,x:v?'':loc&&!/SOS|ajuda/.test(x)?'':x,loc:loc,a:v?4:0,sim:v?1:0,t:Date.now(),rd:cur===c?1:0});save();refresh()},11000);
+upRange();refresh();setTimeout(resize,50);
+})();
+</script>
+<script>if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0)navigator.serviceWorker.register('sw.js').catch(function(){})</script>
 </body>
 </html>
