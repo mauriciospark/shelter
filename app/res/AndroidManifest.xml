@@ -1,0 +1,40 @@
+package com.example.shelter
+
+    import android.os.Bundle
+    import android.widget.Button
+    import android.widget.EditText
+    import androidx.appcompat.app.AppCompatActivity
+    import androidx.recyclerview.widget.LinearLayoutManager
+    import androidx.recyclerview.widget.RecyclerView
+
+    class MainActivity : AppCompatActivity() {
+
+    private val messagesList = mutableListOf(
+    "Bem-vindo ao Shelter Nativo!",
+    "Digite uma mensagem abaixo para começar."
+    )
+
+    private lateinit var adapter: MessageAdapter
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContentView(R.layout.activity_main)
+
+    val recyclerView = findViewById<RecyclerView>(R.id.recyclerViewMessages)
+    val editMessage = findViewById<EditText>(R.id.editMessage)
+        val btnSend = findViewById<Button>(R.id.btnSend)
+
+            adapter = MessageAdapter(messagesList)
+            recyclerView.layoutManager = LinearLayoutManager(this)
+            recyclerView.adapter = adapter
+
+            btnSend.setOnClickListener {
+            val text = editMessage.text.toString().trim()
+            if (text.isNotEmpty()) {
+            adapter.addMessage(text)
+            recyclerView.scrollToPosition(messagesList.size - 1)
+            editMessage.text.clear()
+            }
+            }
+            }
+            }

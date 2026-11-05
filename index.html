@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shelter</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#222819">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<header class="top"><div class="logo">⛺ Shelter<small>Rede de sobrevivência</small></div><div class="stats" id="stats"></div><button class="ib" id="setB" aria-label="Configurações">⚙</button></header>
+<div class="alert" id="alert" hidden></div>
+<div id="app">
+ <section class="pane on" id="pl">
+  <div class="ph"><b>Conversas</b><button class="sb p" id="newG">＋ Grupo</button><button class="sb" id="joinG">Código</button></div>
+  <div class="body" id="rows"></div>
+ </section>
+ <section class="pane" id="pc">
+  <div class="empty" id="pcE">Escolha uma conversa ou crie um grupo.</div>
+  <div class="cc" id="pcC" hidden>
+   <div class="ph"><button class="ib bk" id="back" aria-label="Voltar">←</button><div id="cAv"></div><div class="who"><b id="cN"></b><small id="cS"></small></div><button class="sb" id="infoB">Info</button></div>
+   <div class="msgs" id="msgs"></div>
+   <div class="att" id="att" hidden><button class="sb" data-a="loc">📍 Localização</button><button class="sb" data-a="pt">🚩 Ponto de encontro</button><button class="sb" data-a="ok">✔ Estou bem</button><button class="sb" data-a="help">✋ Preciso de ajuda</button><button class="sb" data-a="sos" style="color:var(--er)">❗ SOS</button></div>
+   <div class="bar"><button class="sb" id="attB" aria-label="Anexar">＋</button><input type="text" id="inp" placeholder="Mensagem" maxlength="300"><button class="sb mic" id="mic" aria-label="Segure para falar">🎙</button><button class="send" id="snd" aria-label="Enviar">➤</button></div>
+  </div>
+ </section>
+ <section class="pane" id="pm">
+  <div class="ph"><b>Mapa da rede</b><button class="sb" id="zi" aria-label="Aproximar">+</button><button class="sb" id="zo" aria-label="Afastar">−</button><button class="sb" id="gps">GPS</button><button class="sb p" id="osm">Ruas</button></div>
+  <div class="mapw" id="mapw"><div class="lg" id="lg"></div><div class="mi" id="mi"></div></div>
+  <div class="nl" id="nl"></div>
+ </section>
+</div>
+<nav id="nav"><button data-p="pl" class="on">Conversas</button><button data-p="pc">Chat</button><button data-p="pm">Mapa</button></nav>
+<div class="modal" id="mod" hidden><div class="mbox" id="mbox"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="javascript/lora-br.js"></script>
+<script src="javascript/leaflet.js"></script>
+</body>
+</html>
